@@ -13,4 +13,5 @@ class UnconstrainedOptim:
     def expected_decrease(self):
         pass
 
-    def find_gradient(self):
+    def get_gradient(self):
+        pass

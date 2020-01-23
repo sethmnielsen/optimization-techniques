@@ -1,6 +1,5 @@
 import numpy as np
-from scipy import optimize as op
-from scipy.optimize import NonlinearConstraint
+from scipy.optimize import minimize, NonlinearConstraint
 
 def J(x, *args): 
     return (1 - x[0])**2 + 100*(x[1] - x[0]**2)**2
@@ -24,8 +23,8 @@ bounds = np.array([[-np.inf, -np.inf],
 constrs = NonlinearConstraint(cfuncs, bounds[0], bounds[1])
 guess = np.array([100,100])
 
-# res = op.minimize(J, guess, method='SLSQP', constraints=[c1, c2], options={'disp': True})
-res = op.minimize(J, guess, method='SLSQP', constraints=constrs, options={'disp': True})
-# res = op.minimize(J, np.array([0,0]), method='BFGS', options={'disp': True})
+# res = minimize(J, guess, method='SLSQP', constraints=[c1, c2], options={'disp': True})
+res = minimize(J, guess, method='SLSQP', constraints=constrs, options={'disp': True})
+# res = minimize(J, np.array([0,0]), method='BFGS', options={'disp': True})
 
 print(f'\n{res}')
