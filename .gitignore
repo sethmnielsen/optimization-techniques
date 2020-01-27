@@ -1,5 +1,7 @@
 # Added by me
 .jop
+*.out
+*.hst
 
 
 # Byte-compiled / optimized / DLL files
