@@ -5,10 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "pyopts_tutorial.py",
+            "name": "hw1: brachi.py",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/lectures/pyopts_tutorial.py",
+            "program": "${workspaceFolder}/hw1/brachi.py",
             "console": "integratedTerminal"
         },
         {
