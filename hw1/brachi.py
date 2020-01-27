@@ -5,11 +5,12 @@ from pyoptsparse.pyOpt_optimization import Optimization
 from pyoptsparse.pyOpt_optimizer import Optimizer
 from pyoptsparse.pyOpt_history import History
 import matplotlib.pyplot as plt
+from matplotlib.ticker import (AutoMinorLocator, MultipleLocator)
 import time
 import traceback
 
 import seaborn as sns
-sns.set_style('whitegrid')
+sns.set_style('white')
 
 # Solve the Brachistochrone Problem
 # Find the min time between 2 pts for a particle subject to gravity only
@@ -20,7 +21,7 @@ sns.set_style('whitegrid')
 
 class Minimize:
     def __init__(self):
-        self.num_pts = np.array([4, 8, 16, 32]) # number of pts including start and end
+        self.num_pts = np.array([4, 8, 16, 32, 64]) # number of pts including start and end
         # self.num_pts = np.array([4])
         self.warm_start = True
         self.ms = 1.0
@@ -61,6 +62,9 @@ class Minimize:
         # Optimizer
         optimizer = pyop.SNOPT()
         optimizer.setOption('iPrint',0)
+        path = '/home/seth/school/optimization/output/'
+        optimizer.setOption('Print file', path+f'SNOPT_print-{n}.out')
+        optimizer.setOption('Summary file', path+f'SNOPT_summary-{n}.out')
 
         return opt_prob, optimizer
     
@@ -75,8 +79,8 @@ class Minimize:
         self.plot_final_results()
 
     def solve_problem(self, opt_prob: pyop.Optimization, optimizer: pyop.SNOPT):
-        sol: Solution = optimizer(opt_prob, storeHistory=f"opt_hist{self.n}.hst")
-        
+        sol: Solution = optimizer(opt_prob, storeHistory=f"output/opt_hist{self.n}.hst")
+
         print("...done!")
         
         sol.fStar *= np.sqrt(2/9.81)
@@ -143,18 +147,39 @@ class Minimize:
         self.ax_pts.legend(title='No. Points')
 
         fig, axes = plt.subplots(nrows=3, ncols=1, sharex=True)
-        # plt.gcf().subplots_adjust(left=0.15)
+        plt.gcf().subplots_adjust(left=0.15)
         
-        axes[0].plot(self.num_pts, self.time_hist)
+        axes[0].plot(self.num_pts, self.time_hist, color='blue')
         axes[0].set_title("Dimensionality")
         axes[0].set_ylabel("travel time (s)")
+        axes[0].xaxis.set_major_locator(MultipleLocator(4))
+        axes[0].xaxis.set_minor_locator(AutoMinorLocator(5))
+        axes[0].yaxis.set_major_locator(MultipleLocator(0.005))
+        axes[0].yaxis.set_minor_locator(AutoMinorLocator(5))
+        axes[0].grid(which='major')
+        axes[0].grid(which='minor', alpha=0.2)
+        axes[0].set_ylim([0.62, 0.66])
         
-        axes[1].plot(self.num_pts, self.wall_time_hist)
-        axes[1].set_ylabel("wall\ntime (s)")
+        axes[1].plot(self.num_pts, self.wall_time_hist, color='orange')
+        axes[1].set_ylabel("wall time (s)\n")
+        axes[1].xaxis.set_major_locator(MultipleLocator(4))
+        axes[1].xaxis.set_minor_locator(AutoMinorLocator(5))
+        axes[1].yaxis.set_major_locator(MultipleLocator(0.5))
+        axes[1].yaxis.set_minor_locator(AutoMinorLocator(5))
+        axes[1].grid(which='major')
+        axes[1].grid(which='minor', alpha=0.2)
+        axes[1].set_ylim([0, 2.5])
         
-        axes[2].plot(self.num_pts, self.func_evals)
-        axes[2].set_ylabel("function\nevaluations")
+        axes[2].plot(self.num_pts, self.func_evals, color='green')
+        axes[2].set_ylabel("function evaluations")
         axes[2].set_xlabel('number of points')
+        # axes[2].xaxis.set_major_locator(MultipleLocator(4))
+        # axes[2].xaxis.set_minor_locator(AutoMinorLocator(5))
+        # axes[2].yaxis.set_major_locator(MultipleLocator(0.05))
+        # axes[2].yaxis.set_minor_locator(AutoMinorLocator(5))
+        axes[2].grid(which='major')
+        axes[2].grid(which='minor', alpha=0.2)
+        axes[2].set_xlim([self.num_pts[0], self.num_pts[-1]])
         
         plt.show()
 
