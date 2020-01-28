@@ -5,7 +5,7 @@ Computes mass and stress for the 10-bar truss structure
 Parameters:
 A: array of length 10 w/ the cross sectional area of each bar
     (see image in hw writeup for number order if interested)
-
+    
 Outputs:
 mass: float mass of the entire structure
 stress: array of length 10 with corresponding stress in each bar
@@ -121,3 +121,4 @@ def node2idx(node, DOF):
 if __name__=="__main__":
     temp = np.ones(10) * .1
     mass, stress = truss(temp)
+    print(mass, stress)

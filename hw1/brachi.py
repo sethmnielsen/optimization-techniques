@@ -21,10 +21,10 @@ sns.set_style('white')
 
 class Minimize:
     def __init__(self):
-        self.num_pts = np.array([4, 8, 16, 32, 64]) # number of pts including start and end
-        # self.num_pts = np.array([4])
+        self.num_pts = np.array([4, 8, 16, 32, 64, 128]) # number of pts including start and end
+        # self.num_pts = np.array([4, 8, 16, 32, 64]) # number of pts including start and end
         self.warm_start = True
-        self.ms = 1.0
+        self.marksz = 1.0
 
         # Figure for x, y points 
         self.fig_pts = plt.figure()
@@ -84,9 +84,7 @@ class Minimize:
         print("...done!")
         
         sol.fStar *= np.sqrt(2/9.81)
-        print(f'sol.fStar: {sol.fStar}')
-        print(f'self.test: {self.test}')
-        print(f'self.test2: {self.test2}')
+        print(f'sol.fStar:  {sol.fStar}')
         
         self.y_arr[1:-1] = sol.xStar['y']
         self.time_hist.append(sol.fStar)
@@ -97,7 +95,6 @@ class Minimize:
         print(f"Printing solution for n = {self.n}:", sol)
     
     def objfunc(self, dvars):
-        g = 9.81
         h = 1.0
         mu = 0.3
 
@@ -118,26 +115,23 @@ class Minimize:
             dy = yip-yi
             
             # Gravity not needed - will multiply it for final result 
-            a = np.sqrt(2.0/g)
+            # a = np.sqrt(2.0/g)
             b = np.sqrt(dx**2+dy**2) 
             c = np.sqrt(h-yip-mu*xip) + np.sqrt(h-yi-mu*xi)
 
             time_sum += b/c
-            time_sum2 += a*b/c
 
         funcs['obj'] = time_sum
         fail = False
-        self.test = time_sum * a
-        self.test2 = time_sum2
         return funcs, fail
     
     def plot_this_solution(self, n):
         props = {
             'label': n,
             'marker': 'o', 
-            'markersize': 12*self.ms
+            'markersize': 12*self.marksz
         }
-        self.ms *= 0.75
+        self.marksz *= 0.75
         self.ax_pts.plot(self.x_arr, self.y_arr, **props)
     
     def plot_final_results(self):
@@ -145,32 +139,39 @@ class Minimize:
         self.ax_pts.set_xlabel('x')
         self.ax_pts.set_ylabel('y')
         self.ax_pts.legend(title='No. Points')
+        self.ax_pts.xaxis.set_major_locator(MultipleLocator(0.2))
+        self.ax_pts.xaxis.set_minor_locator(AutoMinorLocator(5))
+        self.ax_pts.yaxis.set_major_locator(MultipleLocator(0.2))
+        self.ax_pts.yaxis.set_minor_locator(AutoMinorLocator(5))
+        self.ax_pts.grid(which='major')
+        self.ax_pts.grid(which='minor', alpha=0.2)
 
         fig, axes = plt.subplots(nrows=3, ncols=1, sharex=True)
         plt.gcf().subplots_adjust(left=0.15)
+
+        axes[2].set_xlabel('number of points')
+        axes[2].set_xticks(self.num_pts)
+        axes[2].set_xticks(np.arange(0, self.num_pts[-1], 8), minor=True)
         
         axes[0].plot(self.num_pts, self.time_hist, color='blue')
         axes[0].set_title("Dimensionality")
         axes[0].set_ylabel("travel time (s)")
         axes[0].yaxis.set_major_locator(MultipleLocator(0.005))
-        axes[0].yaxis.set_minor_locator(AutoMinorLocator(5))
+        # axes[0].yaxis.set_minor_locator(AutoMinorLocator(5))
         axes[0].grid(which='major')
         axes[0].grid(which='minor', alpha=0.2)
         axes[0].set_ylim([0.62, 0.66])
         
         axes[1].plot(self.num_pts, self.wall_time_hist, color='orange')
         axes[1].set_ylabel("wall time (s)\n")
-        axes[1].yaxis.set_major_locator(MultipleLocator(5))
-        axes[1].yaxis.set_minor_locator(AutoMinorLocator(5))
+        axes[1].yaxis.set_major_locator(MultipleLocator(20))
+        # axes[1].yaxis.set_minor_locator(AutoMinorLocator(5))
         axes[1].grid(which='major')
         axes[1].grid(which='minor', alpha=0.2)
-        axes[1].set_ylim([0, 25])
+        axes[1].set_ylim([0, None])
         
         axes[2].plot(self.num_pts, self.func_evals, color='green')
         axes[2].set_ylabel("function evaluations")
-        axes[2].set_xlabel('number of points')
-        axes[2].xaxis.set_major_locator(MultipleLocator(5))
-        axes[2].xaxis.set_minor_locator(AutoMinorLocator(5))
         axes[2].grid(which='major')
         axes[2].grid(which='minor', alpha=0.2)
         axes[2].set_xlim([self.num_pts[0], self.num_pts[-1]])
