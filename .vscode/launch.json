@@ -9,6 +9,15 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/hw1/brachi.py",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "hw1: trusty_solver.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/hw1/trusty_solver.py",
+            "cwd": "${workspaceFolder}/hw1",
             "console": "integratedTerminal"
         },
         {

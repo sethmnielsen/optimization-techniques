@@ -6,8 +6,6 @@ from pyoptsparse.pyOpt_optimizer import Optimizer
 from pyoptsparse.pyOpt_history import History
 import matplotlib.pyplot as plt
 from matplotlib.ticker import (AutoMinorLocator, MultipleLocator)
-import time
-import traceback
 
 import seaborn as sns
 sns.set_style('white')
@@ -109,6 +107,7 @@ class Minimize:
             # Loop over x and y arrays
             xi = self.x_arr[i]
             xip = self.x_arr[i+1]
+
             yi = y[i]
             yip = y[i+1]
             dx = xip-xi
@@ -182,10 +181,3 @@ if __name__ == '__main__':
     op = Minimize()
     op.run()
     print("Optimization successful")
-    # try:
-        # op.run()
-        # print("Optimization successful")
-    # except Exception as e:
-        # print("Exception occured, printing traceback...\n")
-        # print(traceback.format_exc())
-        # print(e)
