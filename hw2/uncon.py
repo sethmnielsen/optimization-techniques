@@ -33,8 +33,11 @@ outputs : list
 
 def uncon(func, x0, epsilon_g, options=None):
     if options is None: 
-        debug = 1
-        
-        #Set up default options
+        # set defaults here for how you want me to run it.
+
+    """ Your code goes here!  You can (and should) call other functions, but make
+        sure you do not change the function signature for this file.  This is the
+        file I will call to test your algorithm.
+    """
         
     return x_opt, f_opt, outputs
