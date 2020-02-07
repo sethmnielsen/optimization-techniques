@@ -91,21 +91,31 @@ class OptimizerUncon:
 
             self.p = self.choose_search_dir() # done
             self.choose_step_size()           # done
-            if self.update() < self.eps_g:
-                sol = Solution(self.x, self.f, self.outputs)
-
-                print("--------- OPTIMIZATION COMPLETE ------------")
-                print(f'x_opt: {sol.x_opt}')
-                print(f'f_opt: {sol.f_opt}')
-                print(f'outputs: {sol.outputs}\n')
-                print(f'num of iterations: {self.iterations}')
-                if self.options['debug']:
-                    print(f'num of func evals: {func_evals}')
-                return sol
+            if 10 < self.eps_g:
+                return self.finish()
 
             self.iterations += 1
+        
+        return self.finish(False)
+        
 
+    def finish(self, converged=True):
+        sol = Solution(self.x, self.f, self.outputs)
 
+        if converged:
+            print("--------- OPTIMIZATION COMPLETE ------------")
+            iterations_report = f"{self.iterations}"
+        elif not converged:
+            print("--------- OPTIMIZATION COMPLETE - DID NOT CONVERGE ------------")
+            iterations_report = f"{self.iterations} (maximum allowed)"
+
+        print(f'x_opt: {sol.x_opt}')
+        print(f'f_opt: {sol.f_opt}')
+        print(f'outputs: {sol.outputs}\n')
+        print(f'num of iterations: {iterations_report}')
+        if self.options['debug']:
+            print(f'num of func evals: {func_evals}')
+        return sol
 
     def choose_search_dir(self) -> ndarray:
         pfunc = self.options['pfunc']
@@ -167,9 +177,6 @@ class OptimizerUncon:
 
     def bracketed_ls(self):
         pass
-
-    def update(self):
-        return 10
 
     @staticmethod
     def gradient(x:ndarray, f:float, h:float, func) -> (ndarray):
