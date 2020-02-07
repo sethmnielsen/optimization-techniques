@@ -2,6 +2,7 @@
 .jop
 *.out
 *.hst
+output/
 
 
 # Byte-compiled / optimized / DLL files
