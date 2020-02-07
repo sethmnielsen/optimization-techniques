@@ -39,7 +39,7 @@ def brachis(x):
     return 0.
 
 
-""" THIS IS THE FUNCTION THAT WILL ACTUALLY BE CALLED BY NING """
+""" THIS IS THE FUNCTION THAT WILL ACTUALLY BE CALLED BY D NING """
 def uncon(func, x0, epsilon_g, options=None):
     if options is None: 
         # set defaults here for how you want me to run it.
@@ -139,10 +139,11 @@ class OptimizerUncon:
         # phi(alpha) =    f   +  mu1*alpha* gT*p
         # f, mu1, alpha, g, p = self.f, self.mu1, self.alpha, self.g, self.p
         phi = self.f 
-        while  
+        while   
         phi = self.f + self.mu1*self.alpha * self.g @ self.p
                 
     def bracketed_ls(self):
+        
         pass
 
     @staticmethod
@@ -165,9 +166,10 @@ class Solution:
 
 
 if __name__ == '__main__':
-    """ THIS IS ME SIMULATING WHAT NING WILL RUN ON HIS SIDE """
+    """ THIS IS ME SIMULATING WHAT D NING WILL RUN ON HIS SIDE """
 
-
+asdfasdfasdfasdf
+mmm
     # EXCEPT FOR THIS PART; NING WILL NOT PASS OPTIONS
     options =  {'pfunc': 'steepest_descent',
                 'afunc': 'line_search',
