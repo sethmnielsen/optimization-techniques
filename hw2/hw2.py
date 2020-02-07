@@ -39,7 +39,7 @@ def brachis(x):
     return 0.
 
 
-""" THIS IS THE FUNCTION THAT WILL ACTUALLY BE CALLED BY NING """
+""" THIS IS THE FUNCTION THAT WILL ACTUALLY BE CALLED BY D NING """
 def uncon(func, x0, epsilon_g, options=None):
     if options is None:
         # set defaults here for how you want me to run it.
@@ -191,8 +191,7 @@ class Solution:
 
 
 if __name__ == '__main__':
-    """ THIS IS ME SIMULATING WHAT NING WILL RUN ON HIS SIDE """
-
+    """ THIS IS ME SIMULATING WHAT D NING WILL RUN ON HIS SIDE """
 
     # EXCEPT FOR THIS PART; NING WILL NOT PASS OPTIONS
     options =  {'pfunc': 'steepest_descent',
