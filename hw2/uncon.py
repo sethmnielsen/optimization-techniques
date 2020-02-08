@@ -1,4 +1,4 @@
-import numpy as np 
+import numpy as np
 from hw2.hw2 import *
 
 """An algorithm for unconstrained optimization.
@@ -32,12 +32,13 @@ outputs : list
 
 
 def uncon(func, x0, epsilon_g, options=None):
-    if options is None: 
+    if options is None:
         # set defaults here for how you want me to run it.
+        debug = 1
 
     """ Your code goes here!  You can (and should) call other functions, but make
         sure you do not change the function signature for this file.  This is the
         file I will call to test your algorithm.
     """
-        
+
     return x_opt, f_opt, outputs

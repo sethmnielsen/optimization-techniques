@@ -1,6 +1,8 @@
 import numpy as np
 from numpy import ndarray
 import functools
+np.set_printoptions(floatmode='unique')
+
 
 func_evals = 0
 
@@ -83,7 +85,7 @@ class OptimizerUncon:
         self.h = 1e-8
         self.rho = 0.5
         self.mu1 = 1e-4
-        self.iters_limit = 1000
+        self.iters_limit = 5.0e5
 
     def minimize(self):
         while self.iterations < self.iters_limit:
@@ -91,13 +93,24 @@ class OptimizerUncon:
 
             self.p = self.choose_search_dir() # done
             self.choose_step_size()           # done
-            if 10 < self.eps_g:
+            max_g = np.max(self.g)
+            if max_g < self.eps_g:
                 return self.finish()
 
             self.iterations += 1
-        
+
+            if self.iterations % 10000 == 0:
+                print('------- STATS -------')
+                print(f'current iter: {self.iterations}')
+                print(f'current x: {self.x}')
+                print(f'current f: {self.f}')
+                print(f'current a: {self.alpha}')
+                print(f'current g: {self.g}')
+                print(f'   max(g): {max_g}')
+                print(f'   diff_g: {self.eps_g - max_g}\n')
+
         return self.finish(False)
-        
+
 
     def finish(self, converged=True):
         sol = Solution(self.x, self.f, self.outputs)
@@ -111,6 +124,7 @@ class OptimizerUncon:
 
         print(f'x_opt: {sol.x_opt}')
         print(f'f_opt: {sol.f_opt}')
+        print(f'final step size: {self.alpha}')
         print(f'outputs: {sol.outputs}\n')
         print(f'num of iterations: {iterations_report}')
         if self.options['debug']:
@@ -206,10 +220,11 @@ if __name__ == '__main__':
                 'debug': True}
 
     x0 = np.array([2, 3])
-    epsilon_g = 1e-6
-    myfunc = matyas
+    epsilon_g = 1e-5
+    # myfunc = matyas
+    myfunc = rosenbrock
     x_opt, f_opt, outputs = uncon(myfunc, x0, epsilon_g, options)
 
-    print(f'x_opt: {x_opt}')
-    print(f'f_opt: {f_opt}')
-    print(f'outputs: {outputs}')
+    # print(f'x_opt: {x_opt}')
+    # print(f'f_opt: {f_opt}')
+    # print(f'outputs: {outputs}')
