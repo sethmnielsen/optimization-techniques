@@ -91,8 +91,8 @@ class OptimizerUncon:
         while self.iterations < self.iters_limit:
             self.f, self.g = self.func(self.x)
 
-            self.p = self.choose_search_dir() # done
-            self.choose_step_size()           # done
+            self.p = self.choose_search_dir()
+            self.choose_step_size()
             max_g = np.max(self.g)
             if max_g < self.eps_g:
                 return self.finish()
@@ -169,7 +169,6 @@ class OptimizerUncon:
         # f, mu1, alpha, g, p = self.f, self.mu1, self.alpha, self.g, self.p
         phi0 = self.f  # first phi has alpha=0, so phi(0) = f(xk)
         phi = phi0
-        # backtrack lambda : phi0 + self.mu1*self.alpha * self.g @ self.p
         rhs = 0
         alpha = 0
         x = np.zeros(self.n)
@@ -190,7 +189,7 @@ class OptimizerUncon:
         self.x = xk1
 
     def bracketed_ls(self):
-        pass
+       pass 
 
     @staticmethod
     def gradient(x:ndarray, f:float, h:float, func) -> (ndarray):
@@ -224,7 +223,3 @@ if __name__ == '__main__':
     # myfunc = matyas
     myfunc = rosenbrock
     x_opt, f_opt, outputs = uncon(myfunc, x0, epsilon_g, options)
-
-    # print(f'x_opt: {x_opt}')
-    # print(f'f_opt: {f_opt}')
-    # print(f'outputs: {outputs}')
