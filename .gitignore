@@ -3,6 +3,7 @@
 *.out
 *.hst
 output/
+hw2/plotter.py
 
 
 # Byte-compiled / optimized / DLL files
@@ -134,3 +135,4 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+

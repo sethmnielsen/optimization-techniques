@@ -7,6 +7,9 @@ from pyoptsparse.pyOpt_history import History
 import matplotlib.pyplot as plt
 from matplotlib.ticker import (AutoMinorLocator, MultipleLocator)
 
+import os
+print(f'\n\n\nPRINTING: ---- {os.path.dirname(pyop.__file__)}\n\n\n')
+
 import seaborn as sns
 sns.set_style('white')
 
@@ -17,14 +20,15 @@ sns.set_style('white')
 # 2. Report the travel time between the two points
 # 3. Study the effect of increased problem dimensionality
 
-class Minimize:
+class Brachi:
     def __init__(self):
-        self.num_pts = np.array([4, 8, 16, 32, 64, 128]) # number of pts including start and end
-        # self.num_pts = np.array([4, 8, 16, 32, 64]) # number of pts including start and end
+        self.num_pts = np.array([4, 8, 16, 32, 64]) # number of pts including start and end
+        # self.num_pts = np.array([4, 8, 16, 32, 64, 128]) # number of pts including start and end
+        # self.num_pts = np.array([16, 60]) # number of pts including start and end
         self.warm_start = True
         self.marksz = 1.0
 
-        # Figure for x, y points 
+        # Figure for x, y points
         self.fig_pts = plt.figure()
         self.ax_pts = self.fig_pts.add_subplot(111)
 
@@ -36,7 +40,7 @@ class Minimize:
 
     def init_problem(self, n):
         print(f"Solving Brachistochrone problem with n = {n}...")
-        
+
         self.n = n
         self.x_arr = np.linspace(0, 1, n)  # fixed
         if self.warm_start:
@@ -50,6 +54,7 @@ class Minimize:
 
         # Optimization problem
         opt_prob: pyop.Optimization = pyop.Optimization('brachistochrone', self.objfunc)
+
         # Design variables
         opt_prob.addVarGroup('y', nVars=n-2, type='c', value=y_inner, \
                                   lower=None, upper=None)
@@ -65,7 +70,7 @@ class Minimize:
         optimizer.setOption('Summary file', path+f'SNOPT_summary-{n}.out')
 
         return opt_prob, optimizer
-    
+
     def run(self):
         for n in self.num_pts:
             opt_prob = None
@@ -80,26 +85,27 @@ class Minimize:
         sol: Solution = optimizer(opt_prob, storeHistory=f"output/opt_hist{self.n}.hst")
 
         print("...done!")
-        
+
         sol.fStar *= np.sqrt(2/9.81)
         print(f'sol.fStar:  {sol.fStar}')
-        
+
         self.y_arr[1:-1] = sol.xStar['y']
         self.time_hist.append(sol.fStar)
         self.wall_time_hist.append(sol.optTime)
         self.func_evals.append(sol.userObjCalls)
         print("sol.optTime:", sol.optTime)
         print("Calls to objective function:", sol.userObjCalls)
+        # print("Iterations:", sol.)
         print(f"Printing solution for n = {self.n}:", sol)
-    
+
     def objfunc(self, dvars):
-        h = 1.0
-        mu = 0.3
+        h = 1.0 # initial y
+        mu = 0.3 # coeff of friction
 
         funcs = {}
         y = np.zeros(self.n)
         y[1:-1] = dvars['y']
-        y[0] = h 
+        y[0] = h
 
         time_sum = 0
         time_sum2 = 0
@@ -112,10 +118,10 @@ class Minimize:
             yip = y[i+1]
             dx = xip-xi
             dy = yip-yi
-            
-            # Gravity not needed - will multiply it for final result 
+
+            # Gravity not needed - will multiply it for final result
             # a = np.sqrt(2.0/g)
-            b = np.sqrt(dx**2+dy**2) 
+            b = np.sqrt(dx**2+dy**2)
             c = np.sqrt(h-yip-mu*xip) + np.sqrt(h-yi-mu*xi)
 
             time_sum += b/c
@@ -123,16 +129,16 @@ class Minimize:
         funcs['obj'] = time_sum
         fail = False
         return funcs, fail
-    
+
     def plot_this_solution(self, n):
         props = {
             'label': n,
-            'marker': 'o', 
+            'marker': 'o',
             'markersize': 12*self.marksz
         }
         self.marksz *= 0.75
         self.ax_pts.plot(self.x_arr, self.y_arr, **props)
-    
+
     def plot_final_results(self):
         self.ax_pts.set_title('Brachistochrone Optimization Problem')
         self.ax_pts.set_xlabel('x')
@@ -151,7 +157,7 @@ class Minimize:
         axes[2].set_xlabel('number of points')
         axes[2].set_xticks(self.num_pts)
         axes[2].set_xticks(np.arange(0, self.num_pts[-1], 8), minor=True)
-        
+
         axes[0].plot(self.num_pts, self.time_hist, color='blue')
         axes[0].set_title("Dimensionality")
         axes[0].set_ylabel("travel time (s)")
@@ -160,7 +166,7 @@ class Minimize:
         axes[0].grid(which='major')
         axes[0].grid(which='minor', alpha=0.2)
         axes[0].set_ylim([0.62, 0.66])
-        
+
         axes[1].plot(self.num_pts, self.wall_time_hist, color='orange')
         axes[1].set_ylabel("wall time (s)\n")
         axes[1].yaxis.set_major_locator(MultipleLocator(20))
@@ -168,16 +174,16 @@ class Minimize:
         axes[1].grid(which='major')
         axes[1].grid(which='minor', alpha=0.2)
         axes[1].set_ylim([0, None])
-        
+
         axes[2].plot(self.num_pts, self.func_evals, color='green')
         axes[2].set_ylabel("function evaluations")
         axes[2].grid(which='major')
         axes[2].grid(which='minor', alpha=0.2)
         axes[2].set_xlim([self.num_pts[0], self.num_pts[-1]])
-        
+
         plt.show()
 
 if __name__ == '__main__':
-    op = Minimize()
+    op = Brachi()
     op.run()
     print("Optimization successful")
