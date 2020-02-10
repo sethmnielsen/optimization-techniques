@@ -17,7 +17,7 @@ def my_custom_test_func(test_func):
     @functools.wraps(test_func)
     def wrapper_my_custom(x):
         f = test_func(x)
-        g = OptimizerUncon.gradient(x, f, h=1e-8, func=test_func)
+        g = OptimizerUncon.gradient(test_func, x, f)
         return f, g
     return wrapper_my_custom
 
@@ -50,7 +50,9 @@ def brachis(y_dv):
     n = 60
 
     x_arr = np.linspace(0, 1, n)  # fixed
+    lims = np.flip(x_arr)
     y = np.hstack((1.0, y_dv, 0.0))
+    
     time_sum = 0
     for i in range(n-1):
         # Loop over x and y arrays
@@ -65,6 +67,16 @@ def brachis(y_dv):
         # Gravity not needed - will multiply it for final result
         # a = np.sqrt(2.0/g)
         b = np.sqrt(dx**2+dy**2)
+        q = h-yip
+        r = mu*xip
+        s = q-r
+        if s < 0:
+            print('negaaatttiiiivvvveee    s')
+        t = h-yi
+        u = mu*xi
+        v = t-u
+        if v < 0:
+            print('negatiiiivivvveieieie     v')
         c = np.sqrt(h-yip-mu*xip) + np.sqrt(h-yi-mu*xi)
 
         time_sum += b/c
@@ -139,15 +151,16 @@ class OptimizerUncon:
         self.gmax_arr = []
 
         # Tunables
-        self.alpha = 0.1
-        self.h = 1e-8
+        self.alpha_guess = 0.1
+        self.alpha = self.alpha_guess
+        self.alpha_max = 0.4 
         self.rho = 0.7
         self.mu1 = 1e-4
         self.mu2 = 0.5
         self.iters_limit = 5.0e5
 
     @staticmethod
-    def gradient(x:ndarray, f:float, h:float, func, run=True) -> (ndarray):
+    def gradient(func, x:ndarray, f:float, h=1e-8, run=True) -> (ndarray):
         n = len(x)
         if not run:
             return np.zeros(n)
@@ -162,24 +175,23 @@ class OptimizerUncon:
 
     def minimize(self):
         self.create_plot('Convergence Plot', 'Iterations', r'$\Vert{g}\Vert$')
+        self.f, self.g = self.func(self.x)
         while self.iterations < self.iters_limit:
-            self.f, self.g = self.func(self.x)
 
             self.p = self.choose_search_dir()
-            self.choose_step_size()
-            max_g = np.max(self.g)
+            self.alpha = self.choose_step_size()
+            max_g = np.abs(np.max(self.g))
 
-            if self.iterations % 200 == 0:
-                self.iters_arr.append(self.iterations)
-                self.gmax_arr.append(max_g)
-                self.plotter.update_plot(0,0,0,self.iters_arr, self.gmax_arr)
+            if self.iterations % 50 == 0:
+                self.redraw(max_g)
 
             self.iterations += 1
 
             if max_g < self.eps_g:
+                self.redraw(max_g)
                 return self.finish()
 
-            if self.iterations % 10000 == 0 and self.options['debug']:
+            if self.iterations % 50 == 0 and self.options['debug']:
                 print('------- STATS -------')
                 print(f'current iter: {self.iterations}')
                 print(f'current x: {self.x}')
@@ -190,6 +202,12 @@ class OptimizerUncon:
                 print(f'   diff_g: {self.eps_g - max_g}\n')
 
         return self.finish(False)
+    
+    def redraw(self, max_g):
+        self.iters_arr.append(self.iterations)
+        self.gmax_arr.append(max_g)
+        self.plotter.update_plot(0,0,0,self.iters_arr, self.gmax_arr)
+        
 
     def create_plot(self, title, xlabs, ylabs):
         title = 'Convergence Plot'
@@ -225,6 +243,8 @@ class OptimizerUncon:
             print(f'num of func evals: {func_evals}')
             print(f'final gradient: {self.g}')
             print(f'final gmax: {np.max(self.g)}')
+        self.plotter.hold_plot()
+        self.plotter.close_plots()
         return sol
 
     def choose_search_dir(self) -> ndarray:
@@ -277,73 +297,89 @@ class OptimizerUncon:
             xk1 = self.x + alpha*self.p
             f, g = self.func(xk1)
             phi = f
-            rhs = phi0 + self.mu1*alpha*g @ self.p
+            rhs = phi0 + self.mu1*alpha*(g @ self.p)
             cnt += 1
-        self.alpha = alpha
-        self.g = g
+        self.g = np.array(g)
         self.f = f
         self.x = xk1
+        return alpha
 
-    def bracketed_ls(self, alpha_guess, alpha_max):
+    def bracketed_ls(self):
         phi0 = self.f
-        alpha_prev = 0.0
-        alpha = alpha_guess
-        phi_prime_0 = self.g @ self.p
+        self.phi_prime0 = self.g @ self.p  # phi_prime at current xk
         phi_prev = self.f
-        loop_calls = 0
-        max_loop_calls = 40
+        alpha_prev = 0.
+        # alpha = self.alpha
+        alpha = self.alpha_guess
+        alpha_max = self.alpha_max
+        
+        g_prev = np.array(self.g)
+        g = np.zeros(self.g.shape)
+        i = 0
         while True:
-            xk1 = self.x + alpha*self.p
-            f, g = self.func(xk1)
+            x_new = self.x + alpha*self.p
+            f, g = self.func(x_new)
             phi = f
             rhs = phi0 + self.mu1*alpha*g @ self.p
-            if (phi > rhs) or (phi > phi_prev):
-                alpha_star = self.pinpoint(alpha_prev, alpha)
+            if (phi > rhs) or (phi > phi_prev and i > 0):
+                alpha_star, x_new, f, g = self.pinpoint(g_prev, alpha_prev, phi_prev, alpha, phi)
                 break
             phi_prime = g @ self.p
-            if abs(phi_prime) <= -self.mu2*phi_prime_0:
+            if abs(phi_prime) <= -self.mu2*self.phi_prime0:
                 alpha_star = alpha
                 break
             elif phi_prime >= 0:
-                alpha_star = self.pinpoint(alpha, alpha_prev)
+                alpha_star, x_new, f, g = self.pinpoint(g, alpha, phi, alpha_prev, phi_prev)
                 break
             else:
                 alpha_next = np.random.uniform(alpha, alpha_max)
             alpha_prev = alpha
             alpha = alpha_next
             phi_prev = phi
-            loop_calls += 1
+            i += 1
+        self.g = g
+        self.f = f
+        self.x = x_new
         return alpha_star
 
-    def pinpoint(self, alpha_low, alpha_high):
+    def pinpoint(self, gl, a_low, phi_low, a_high, phi_high) -> float:
+        g_new = np.zeros(gl.shape)
+        f_new = 0
+        alpha_star = 0
+        alpha_new = self.alpha_guess
         phi0 = self.f
-        phi_prime_0 = self.g @ self.p
-        loop_calls = 0
-        max_loop_calls = 15
+        phi_prime0 = self.phi_prime0
+        phi_prime_low = gl @ self.p  # phi_low, gl = func(x + a_low*p)
+        j = 0
         while True:
-            if loop_calls > max_loop_calls:
-                # return np.random.uniform(np.minimum(alpha_low, alpha_high), np.maximum(alpha_low, alpha_high))
-                return alpha_low*np.random.uniform()
-            phi_alpha_low = self.func(self.x + alpha_low*self.p)
-            # print("phi_alpha_low",phi_alpha_low, "for alpha_low:", alpha_low)
-            phi_alpha_high = self.func(self.x + alpha_high*self.p)
-            # print("phi_alpha_high",phi_alpha_high, "for alpha_high:", alpha_high)
-            phi_prime_alpha_low = self.gradient(self.func, (self.x + alpha_low*self.p)) @ self.p
-            alpha = ((2*alpha_low*(phi_alpha_high-phi_alpha_low)+phi_prime_alpha_low*(alpha_low**2-alpha_high**2))/
-                    (2*(phi_alpha_high-phi_alpha_low+phi_prime_alpha_low*(alpha_low-alpha_high))))
-            phi = self.func(self.x + alpha*self.p)
-            if (phi > phi0 + self.mu1*alpha*phi_prime_0) or (phi > phi_alpha_low):
-                alpha_high = alpha
+            if j > 1000:
+                alpha_star = alpha_new
+                break
+            # interpolate alpha_new
+            numer = 2*a_low*(phi_high - phi_low) + phi_prime_low*(a_low**2 - a_high**2)
+            denom = 2*( phi_high - phi_low + phi_prime_low*(a_low - a_high) )
+            alpha_new = numer / denom
+            # Evaluate new objective, gradient (f, g)
+            x_new = self.x + alpha_new*self.p
+            f_new, g_new = self.func(x_new)
+            phi_new = f_new
+            if (phi_new > phi0 + self.mu1*alpha_new*phi_prime0) or (phi_new > phi_low):
+                a_high = alpha_new
+                phi_high = phi_new
             else:
-                phi_prime = self.gradient(self.func, (self.x + alpha*self.p)) @ self.p
-                if abs(phi_prime) <= -self.mu2*phi_prime_0:
-                    alpha_star = alpha
+                phi_prime_new = g_new @ self.p
+                if abs(phi_prime_new) <= -self.mu2*phi_prime0:
+                    alpha_star = alpha_new
                     break
-                elif phi_prime*(alpha_high-alpha_low) >= 0:
-                    alpha_high = alpha_low
-                alpha_low = alpha
-            loop_calls += 1
-        return alpha_star
+                elif phi_prime_new*(a_high-a_low) >= 0:
+                    a_high = a_low
+                    phi_high = phi_low
+                a_low = alpha_new
+                gl = np.array(g_new)
+                phi_low = phi_new
+                phi_prime_low = phi_prime_new
+            j += 1
+        return alpha_star, x_new, f_new, g_new 
 
 
 class Solution:
@@ -357,13 +393,14 @@ if __name__ == '__main__':
     """ THIS IS ME SIMULATING WHAT D NING WILL RUN ON HIS SIDE """
 
     # EXCEPT FOR THIS PART; NING WILL NOT PASS OPTIONS
+                # 'afunc': 'line_search',
     options =  {'pfunc': 'steepest_descent',
-                'afunc': 'line_search',
+                'afunc': 'bracketed_ls',
                 'debug': True,
                 'plot_x_vec': False}
 
 
-    epsilon_g = 1e-6
+    epsilon_g = 1e-5
     # myfunc = matyas
     # myfunc = rosenbrock
     myfunc = brachis
@@ -371,6 +408,6 @@ if __name__ == '__main__':
     if myfunc == brachis:
         x0 = np.linspace(1.0,0.0,60)[1:-1]
     else:
-        x0 = np.array([-2, 5])
+        x0 = np.array([-20, 13.58])
 
     x_opt, f_opt, outputs = uncon(myfunc, x0, epsilon_g, options)

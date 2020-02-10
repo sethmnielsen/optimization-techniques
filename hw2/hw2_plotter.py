@@ -2,6 +2,8 @@ import numpy as np
 from numpy import ndarray
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
+from matplotlib.pyplot import Figure
+from matplotlib.pyplot import FigureCanvasBase
 from matplotlib.lines import Line2D
 
 import seaborn as sns
@@ -19,7 +21,8 @@ class Plotter:
     def __init__(self):
         self.figs = []
         self.axes = []
-
+        
+        # plt.ion()
 
     def make_new_plot(self, nrows, ncols, title, xlabs, ylabs, sharex=True):
         fig, axes = plt.subplots(nrows=nrows, ncols=ncols, sharex=sharex, squeeze=False)
@@ -39,7 +42,8 @@ class Plotter:
         ax:Axes = self.axes[fig_ind][ax_ind]
         line, = ax.plot(xdata, ydata, label=lab)
 
-        self.figs[fig_ind].canvas.draw()
+        fig:Figure = self.figs[fig_ind]
+        fig.canvas.draw()
         plt.show(block=False)
         plt.pause(0.0001)
 
@@ -52,3 +56,9 @@ class Plotter:
         ax.autoscale_view(True,True,True)
         ax.redraw_in_frame()
         plt.pause(0.00001)
+    
+    def hold_plot(self):
+        plt.show(block=True)
+    
+    def close_plots(self):
+        plt.close('all')

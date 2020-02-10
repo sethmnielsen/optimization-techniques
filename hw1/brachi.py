@@ -22,7 +22,7 @@ sns.set_style('white')
 
 class Brachi:
     def __init__(self):
-        self.num_pts = np.array([4, 8, 16, 32, 64]) # number of pts including start and end
+        self.num_pts = np.array([32,64]) # number of pts including start and end
         # self.num_pts = np.array([4, 8, 16, 32, 64, 128]) # number of pts including start and end
         # self.num_pts = np.array([16, 60]) # number of pts including start and end
         self.warm_start = True
@@ -140,6 +140,11 @@ class Brachi:
         self.ax_pts.plot(self.x_arr, self.y_arr, **props)
 
     def plot_final_results(self):
+        props = {
+            'ls': '--',
+            'color': 'k'
+        }
+        self.ax_pts.plot([0,1], [1,0], **props)
         self.ax_pts.set_title('Brachistochrone Optimization Problem')
         self.ax_pts.set_xlabel('x')
         self.ax_pts.set_ylabel('y')

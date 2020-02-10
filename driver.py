@@ -129,9 +129,7 @@ def pinpoint(func, x, g, p, mu_1, mu_2, alpha_low, alpha_high):
             # return np.random.uniform(np.minimum(alpha_low, alpha_high), np.maximum(alpha_low, alpha_high))
             return alpha_low*np.random.uniform()
         phi_alpha_low = func(x + alpha_low*p)
-        # print("phi_alpha_low",phi_alpha_low, "for alpha_low:", alpha_low)
         phi_alpha_high = func(x + alpha_high*p)
-        # print("phi_alpha_high",phi_alpha_high, "for alpha_high:", alpha_high)
         phi_prime_alpha_low = find_gradient(func, (x + alpha_low*p)).T@p
         alpha = ((2*alpha_low*(phi_alpha_high-phi_alpha_low)+phi_prime_alpha_low*(alpha_low**2-alpha_high**2))/
                 (2*(phi_alpha_high-phi_alpha_low+phi_prime_alpha_low*(alpha_low-alpha_high))))
