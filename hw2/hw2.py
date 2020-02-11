@@ -296,7 +296,7 @@ class OptimizerUncon:
         I = np.eye(self.n)
         s = self.alpha * self.p
         y = self.g - self.g_prev
-        den = np.outer(s,y0)
+        den = np.outer(s,y)
         divmat = (s @ y)/den
 
         self.V = (I - divmat) @ self.V @ (I - divmat) + (s@s)/den
@@ -344,6 +344,9 @@ class OptimizerUncon:
         g = np.zeros(self.g.shape)
         i = 0
         while True:
+            if i > 100:
+                alpha_star = np.random.uniform(alpha, alpha_max)
+                break
             x_new = self.x + alpha*self.p
             f, g = self.func(x_new)
             phi = f
@@ -360,10 +363,10 @@ class OptimizerUncon:
                 break
             else:
                 alpha_next = np.random.uniform(alpha, alpha_max)
-            alpha_prev = alpha
-            alpha = alpha_next
-            phi_prev = phi
-            i += 1
+                alpha_prev = alpha
+                alpha = alpha_next
+                phi_prev = phi
+                i += 1
         self.g_prev = np.array(self.g)
         self.g = g
         self.f = f
