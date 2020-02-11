@@ -90,7 +90,7 @@ class Brachi:
         print(f'sol.fStar:  {sol.fStar}')
 
         self.y_arr[1:-1] = sol.xStar['y']
-        self.time_hist.append(sol.fStar)
+        # self.time_hist.append(sol.fStar)
         self.wall_time_hist.append(sol.optTime)
         self.func_evals.append(sol.userObjCalls)
         print("sol.optTime:", sol.optTime)

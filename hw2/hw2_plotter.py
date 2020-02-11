@@ -21,7 +21,7 @@ class Plotter:
     def __init__(self):
         self.figs = []
         self.axes = []
-        
+
         # plt.ion()
 
     def make_new_plot(self, nrows, ncols, title, xlabs, ylabs, sharex=True):
@@ -56,9 +56,9 @@ class Plotter:
         ax.autoscale_view(True,True,True)
         ax.redraw_in_frame()
         plt.pause(0.00001)
-    
+
     def hold_plot(self):
         plt.show(block=True)
-    
+
     def close_plots(self):
         plt.close('all')

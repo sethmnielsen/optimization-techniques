@@ -50,9 +50,23 @@ def brachis(y_dv):
     n = 60
 
     x_arr = np.linspace(0, 1, n)  # fixed
-    lims = np.flip(x_arr)
     y = np.hstack((1.0, y_dv, 0.0))
-    
+
+    y_low_lim = -0.9*x_arr+0.9
+    y_high_lim = np.flip(x_arr)
+
+    # mask_low = y<y_low_lim
+    # if np.any(mask_low):
+    #     # print(f'\ny_low: {y[mask_low]}')
+    #     # print(f'low_inds: {np.nonzero(mask_low)[0]}')
+    #     y[mask_low] = y_low_lim[mask_low]
+
+    # mask_high = y>y_high_lim
+    # if np.any(mask_high):
+    #     # print(f'\ny_high: {y[mask_high]}')
+    #     # print(f'high_inds: {np.nonzero(mask_high)[0]}')
+    #     y[mask_high] = y_high_lim[mask_high]
+
     time_sum = 0
     for i in range(n-1):
         # Loop over x and y arrays
@@ -77,7 +91,7 @@ def brachis(y_dv):
         v = t-u
         if v < 0:
             print('negatiiiivivvveieieie     v')
-        c = np.sqrt(h-yip-mu*xip) + np.sqrt(h-yi-mu*xi)
+        c = np.sqrt(s) + np.sqrt(v)
 
         time_sum += b/c
 
@@ -138,11 +152,13 @@ class OptimizerUncon:
         n = len(x0)
 
         self.n = n
-        self.V = np.eye(n)
+        self.V:ndarray = np.eye(n)
 
         self.x = np.copy(x0)
+        self.x_prev = np.copy(x0)
         self.f = 0.
         self.g = np.zeros(n)
+        self.g_prev = np.zeros(n)
         self.p = np.zeros(n)
         self.plotter = Plotter()
 
@@ -153,7 +169,7 @@ class OptimizerUncon:
         # Tunables
         self.alpha_guess = 0.1
         self.alpha = self.alpha_guess
-        self.alpha_max = 0.4 
+        self.alpha_max = 0.4
         self.rho = 0.7
         self.mu1 = 1e-4
         self.mu2 = 0.5
@@ -202,12 +218,12 @@ class OptimizerUncon:
                 print(f'   diff_g: {self.eps_g - max_g}\n')
 
         return self.finish(False)
-    
+
     def redraw(self, max_g):
         self.iters_arr.append(self.iterations)
         self.gmax_arr.append(max_g)
         self.plotter.update_plot(0,0,0,self.iters_arr, self.gmax_arr)
-        
+
 
     def create_plot(self, title, xlabs, ylabs):
         title = 'Convergence Plot'
@@ -274,9 +290,18 @@ class OptimizerUncon:
             yk = gk1 - gk
         '''
         if not self.init:
-            self.V = np.eye(self.n)
-        _, self.g = self.func(self.x)
-        p = -self.V @ self.g
+            self.init = True
+            return -1*self.V @ self.g
+
+        I = np.eye(self.n)
+        s = self.alpha * self.p
+        y = self.g - self.g_prev
+        den = np.outer(s,y0)
+        divmat = (s @ y)/den
+
+        self.V = (I - divmat) @ self.V @ (I - divmat) + (s@s)/den
+
+        p = -1*self.V @ self.g
         return p
 
     def line_search(self):
@@ -299,8 +324,10 @@ class OptimizerUncon:
             phi = f
             rhs = phi0 + self.mu1*alpha*(g @ self.p)
             cnt += 1
+        self.g_prev = np.array(self.g)
         self.g = np.array(g)
         self.f = f
+        self.x_prev = np.copy(self.x)
         self.x = xk1
         return alpha
 
@@ -312,7 +339,7 @@ class OptimizerUncon:
         # alpha = self.alpha
         alpha = self.alpha_guess
         alpha_max = self.alpha_max
-        
+
         g_prev = np.array(self.g)
         g = np.zeros(self.g.shape)
         i = 0
@@ -337,6 +364,7 @@ class OptimizerUncon:
             alpha = alpha_next
             phi_prev = phi
             i += 1
+        self.g_prev = np.array(self.g)
         self.g = g
         self.f = f
         self.x = x_new
@@ -379,7 +407,7 @@ class OptimizerUncon:
                 phi_low = phi_new
                 phi_prime_low = phi_prime_new
             j += 1
-        return alpha_star, x_new, f_new, g_new 
+        return alpha_star, x_new, f_new, g_new
 
 
 class Solution:
@@ -394,7 +422,7 @@ if __name__ == '__main__':
 
     # EXCEPT FOR THIS PART; NING WILL NOT PASS OPTIONS
                 # 'afunc': 'line_search',
-    options =  {'pfunc': 'steepest_descent',
+    options =  {'pfunc': 'quasi_newton',
                 'afunc': 'bracketed_ls',
                 'debug': True,
                 'plot_x_vec': False}
@@ -402,8 +430,8 @@ if __name__ == '__main__':
 
     epsilon_g = 1e-5
     # myfunc = matyas
-    # myfunc = rosenbrock
-    myfunc = brachis
+    myfunc = rosenbrock
+    # myfunc = brachis
 
     if myfunc == brachis:
         x0 = np.linspace(1.0,0.0,60)[1:-1]
