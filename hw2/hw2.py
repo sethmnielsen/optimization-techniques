@@ -310,13 +310,14 @@ class OptimizerUncon:
         # f, mu1, alpha, g, p = self.f, self.mu1, self.alpha, self.g, self.p
         phi0 = self.f  # first phi has alpha=0, so phi(0) = f(xk)
         phi = phi0
-        rhs = 0
+        rhs = phi0 + self.mu1*alpha*(g @ self.p)
         alpha = 0
         x = np.zeros(self.n)
         cnt = 0
         while phi > rhs:
             if cnt == 0:
                 alpha = self.alpha
+                alpha = self.alpha_guess
             else:
                 alpha *= self.rho
             xk1 = self.x + alpha*self.p
@@ -426,19 +427,19 @@ if __name__ == '__main__':
     # EXCEPT FOR THIS PART; NING WILL NOT PASS OPTIONS
                 # 'afunc': 'line_search',
     options =  {'pfunc': 'quasi_newton',
-                'afunc': 'bracketed_ls',
+                'afunc': 'line_search',
                 'debug': True,
                 'plot_x_vec': False}
 
 
     epsilon_g = 1e-5
-    # myfunc = matyas
-    myfunc = rosenbrock
+    myfunc = matyas
+    # myfunc = rosenbrock
     # myfunc = brachis
 
     if myfunc == brachis:
         x0 = np.linspace(1.0,0.0,60)[1:-1]
     else:
-        x0 = np.array([-20, 13.58])
+        x0 = np.array([2, 3])
 
     x_opt, f_opt, outputs = uncon(myfunc, x0, epsilon_g, options)
