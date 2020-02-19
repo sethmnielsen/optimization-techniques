@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+
+# pylint: skip-file
+
 import numpy as np
 from numpy import ndarray
 import functools
@@ -310,7 +314,7 @@ class OptimizerUncon:
         # f, mu1, alpha, g, p = self.f, self.mu1, self.alpha, self.g, self.p
         phi0 = self.f  # first phi has alpha=0, so phi(0) = f(xk)
         phi = phi0
-        rhs = phi0 + self.mu1*alpha*(g @ self.p)
+        rhs = phi0 + self.mu1*self.alpha*(self.g @ self.p)
         alpha = 0
         x = np.zeros(self.n)
         cnt = 0
