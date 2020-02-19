@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
-import jax.numpy as np
+import jax.numpy as jnp
 from jax import grad, jit, vmap
 from jax.numpy import ndarray
+import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 from scipy.optimize import NonlinearConstraint
@@ -52,12 +53,11 @@ class truss_solver():
         # self.plot_final_results(sol)
 
     def solve_problem(self):
-        method = 'FD'
+        method = 'complex'
         self.m, self.s = truss(self.areas)
         # while self.iterations < self.iters_limit:
         while self.iterations < 1:
-            go = self.gradient(method, truss_mass, self.areas, self.m)
-            gc = self.gradient(method, truss_stress, self.areas, self.s)
+            dm, ds = self.gradient(method, truss, self.areas, self.m, self.s)
 
 
             self.iterations += 1
@@ -66,7 +66,8 @@ class truss_solver():
         print('...done!')
 
         print(f'method: {method}')
-        print(f'gradient: {go}')
+        print(f'dm/dA: {dm}')
+        print(f'ds/dA: {ds}')
 
         return np.zeros(1)
 
@@ -84,42 +85,50 @@ class truss_solver():
     #     mass, stress = truss(areas)
     #     return mass, stress
 
-    def gradient(self, method: str, func, x:ndarray, f:float) -> (ndarray):
+    def gradient(self, method: str, func, A:ndarray, m, s) -> (ndarray):
         if method == 'FD':
-            g = self.finite_diff(func, x, f)
-        elif method == 'complex-step':
-            g = self.complex_step(func, x, f)
+            dm, ds = self.finite_diff(func, A, m, s)
+        elif method == 'complex':
+            dm, ds = self.complex_step(func, A, m, s)
         elif method == 'AD':
-            g = self.algo_diff(func, x, f)
+            dm, ds = self.algo_diff(func, A, m, s)
         elif method == 'adjoint':
-            g = self.adjoint(func, x, f)
+            dm, ds = self.adjoint(func, A, m, s)
 
-        return g
+        return dm, ds
 
-    def finite_diff(self, func, A:ndarray, f:float, h=1e-8) -> (ndarray):
+    def finite_diff(self, func, A:ndarray, m, s, h=1e-8) -> (ndarray):
         n = len(A)
-        g = np.zeros((n,len)
+        dm = np.zeros(n)
+        ds = np.zeros((n,s.size))
         for j in range(n):
             e = np.zeros(n)
             e[j] = h
+            mj, sj = func(A+e)
             # forward differencing
-            g[j] = (func(A+e) - f)/h
-        return g
+            dm[j] = (mj - m)/h
+            ds[j] = (sj - s)/h
+        return dm, ds
 
-    def complex_step(self, func, A, f, h=1e-40):
+    def complex_step(self, func, A, m, s, h=1e-40):
         n = len(A)
-        g = np.zeros(n)
+        dm = np.zeros(n, dtype=np.complex64)
+        ds = np.zeros((n, s.size), dtype=np.complex64)
+        hi = h+0.j
         for j in range(n):
-            e = np.zeros(n)
-            e[j] = h
-            g[j] = (func(A+e)
-        return
+            e = np.zeros(n, dtype=np.complex64)
+            e[j] = hi
+            mj, sj = func(A+e)
+            # complex step
+            dm[j] = np.imag(mj)/h
+            ds[j] = np.imag(sj)/h
+        return dm, ds
 
-    def algo_diff(self, func, x, f):
-        return 0
+    def algo_diff(self, func, A, m, s):
+        return 0, 0
 
-    def adjoint(self, func, x, f):
-        return 0
+    def adjoint(self, func, A, m, s):
+        return 0, 0
 
     def plot_final_results(self, sol):
         fig, axes = plt.subplots(nrows=3, ncols=1, sharex=False)

@@ -1,11 +1,11 @@
-import numpy as np 
+import numpy as np
 
 '''
 Computes mass and stress for the 10-bar truss structure
 Parameters:
 A: array of length 10 w/ the cross sectional area of each bar
     (see image in hw writeup for number order if interested)
-    
+
 Outputs:
 mass: float mass of the entire structure
 stress: array of length 10 with corresponding stress in each bar
@@ -31,7 +31,7 @@ def truss(A):
 
     n = np.size(Fx) #number of nodes
     DOF = 2
-    
+
     # compute mass
     mass = np.sum(rho * A * L)
 
@@ -39,22 +39,22 @@ def truss(A):
     K = np.zeros((DOF * n, DOF * n))
     S = np.zeros((nbar, DOF * n))
 
-    for i in range(nbar): #loop through each bar 
+    for i in range(nbar): #loop through each bar
         Ksub, Ssub = bar(E[i], A[i], L[i], phi[i])
         idx = node2idx([start[i], finish[i]], DOF)
         idxx, idxy = np.meshgrid(idx,idx)
 
-        K[idxy, idxx] += Ksub 
-        S[i, idx] = Ssub 
-    
+        K[idxy, idxx] += Ksub
+        S[i, idx] = Ssub
+
     #setup applied loads
-    F = np.zeros(n * DOF) 
+    F = np.zeros(n * DOF)
 
     for i in range(n):
         idx = node2idx([i], DOF)
         F[idx[0]] = Fx[i]
         F[idx[1]] = Fy[i]
-    
+
     #setup boundary condition
     idxx = np.argwhere(rigidx).squeeze()
     idxy = np.argwhere(rigidy).squeeze()
@@ -111,11 +111,11 @@ def node2idx(node, DOF):
     idx = np.empty(0)
 
     for i in range(len(node)):
-        start = DOF * (node[i]-1) + 2 
+        start = DOF * (node[i]-1) + 2
         finish = DOF * node[i] + 1
 
-        idx = np.hstack((idx, np.arange(start, finish+1)))       
-    
+        idx = np.hstack((idx, np.arange(start, finish+1)))
+
     return idx.astype(int)
 
 if __name__=="__main__":

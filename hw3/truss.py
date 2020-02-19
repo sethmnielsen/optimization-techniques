@@ -1,8 +1,9 @@
-import jax.numpy as np
+import jax.numpy as jnp
 from jax.config import config
 config.update("jax_enable_x64", True) # make sure jax always uses doubles
 
-import numpy as onp
+import numpy as np
+from numpy import ndarray
 from IPython.core.debugger import Pdb
 
 '''
@@ -15,26 +16,27 @@ Outputs:
 mass: float mass of the entire structure
 stress: array of length 10 with corresponding stress in each bar
 '''
-def truss(A):
+def truss(A: ndarray):
+    typ = A.dtype
     P = 1e5 # applied loads
     Ls = 360 # length of sides
-    Ld = np.sqrt(360**2 * 2) # length of diagonals
+    Ld = np.sqrt(Ls**2 * 2) # length of diagonals
 
-    start = np.array([5, 3, 6, 4, 4, 2, 5, 6, 3, 4]) - 1
-    finish = np.array([3, 1, 4, 2, 3, 1, 4, 3, 2, 1]) - 1
-    phi = np.deg2rad(np.array([0, 0, 0, 0, 90, 90, -45, 45, -45, 45]))
-    L1 = np.array([Ls]*6)
-    L2 = np.array([Ld]*4)
+    start = np.array([5, 3, 6, 4, 4, 2, 5, 6, 3, 4], dtype=typ) - 1
+    finish = np.array([3, 1, 4, 2, 3, 1, 4, 3, 2, 1], typ) - 1
+    phi = np.radians(np.array([0, 0, 0, 0, 90, 90, -45, 45, -45, 45])).astype(typ)
+    L1 = np.array([Ls]*6, typ)
+    L2 = np.array([Ld]*4, typ)
     L = np.concatenate((L1, L2), axis=0)
 
     nbar = np.size(A)
-    E = 1e7 * np.ones(nbar) # modulus of elasticity
-    rho = 0.1 * np.ones(nbar) # material density
+    E = 1e7 * np.ones(nbar, typ) # modulus of elasticity
+    rho = 0.1 * np.ones(nbar, typ) # material density
 
-    Fx = np.zeros(6, dtype=np.float64)
-    Fy = np.array([0.0, -P, 0.0, -P, 0.0, 0.0])
-    rigidx = np.array([0, 0, 0, 0, 1, 1])
-    rigidy = np.array([0, 0, 0, 0, 1, 1])
+    Fx = np.zeros(6, dtype=typ)
+    Fy = np.array([0.0, -P, 0.0, -P, 0.0, 0.0], typ)
+    rigidx = np.array([0, 0, 0, 0, 1, 1], typ)
+    rigidy = np.array([0, 0, 0, 0, 1, 1], typ)
 
     n = np.size(Fx) #number of nodes
     DOF = 2
@@ -43,8 +45,8 @@ def truss(A):
     mass = np.sum(rho * A * L)
 
     # assemble global matrices
-    K: np.DeviceArray = np.zeros((DOF * n, DOF * n))
-    S: np.DeviceArray = np.zeros((nbar, DOF * n))
+    K: ndarray = np.zeros((DOF * n, DOF * n), typ)
+    S: ndarray = np.zeros((nbar, DOF * n), typ)
 
     for i in range(nbar): #loop through each bar
         Ksub, Ssub = bar(E[i], A[i], L[i], phi[i])
@@ -55,7 +57,7 @@ def truss(A):
         S[i, idx] = Ssub
 
     #setup applied loads
-    F = np.zeros(n * DOF)
+    F = np.zeros(n * DOF, typ)
 
     for i in range(n):
         idx = node2idx([i], DOF)
@@ -74,10 +76,10 @@ def truss(A):
 
     remove = np.concatenate((removex, removey), axis=0)
 
-    K = onp.delete(K, remove, axis=0)
-    K = onp.delete(K, remove, axis=1)
-    F = onp.delete(F, remove)
-    S = onp.delete(S, remove, axis=1)
+    K = np.delete(K, remove, axis=0)
+    K = np.delete(K, remove, axis=1)
+    F = np.delete(F, remove)
+    S = np.delete(S, remove, axis=1)
 
     d = np.linalg.solve(K, F)
     stress = S @ d

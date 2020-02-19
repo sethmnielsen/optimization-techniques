@@ -22,10 +22,8 @@ sns.set_style('white')
 
 class Brachi:
     def __init__(self):
-        self.num_pts = np.array([32,64]) # number of pts including start and end
         # self.num_pts = np.array([4, 8, 16, 32, 64, 128]) # number of pts including start and end
-        # self.num_pts = np.array([16, 60]) # number of pts including start and end
-        self.warm_start = True
+        self.num_pts = np.array([32, 64]) # number of pts including start and end
         self.marksz = 1.0
 
         # Figure for x, y points
@@ -43,10 +41,7 @@ class Brachi:
 
         self.n = n
         self.x_arr = np.linspace(0, 1, n)  # fixed
-        if self.warm_start:
-            y_inner = np.linspace(1-1/n, 1/n, n-2)  # initial guess of (inner) values
-        else:
-            y_inner = np.zeros(n-2)
+        y_inner = np.linspace(1-1/n, 1/n, n-2)  # initial guess of (inner) values
 
         # Optimal/final y points
         self.y_arr = np.zeros(n)
@@ -73,10 +68,10 @@ class Brachi:
 
     def run(self):
         for n in self.num_pts:
-            opt_prob = None
-            optimizer = None
-            opt_prob, optimizer = self.init_problem(n)
-            self.solve_problem(opt_prob, optimizer)
+            self.opt_prob = None
+            self.optimizer = None
+            self.opt_prob, self.optimizer = self.init_problem(n)
+            self.solve_problem(self.opt_prob, self.optimizer)
             self.plot_this_solution(n)
 
         self.plot_final_results()
@@ -98,13 +93,13 @@ class Brachi:
         # print("Iterations:", sol.)
         print(f"Printing solution for n = {self.n}:", sol)
 
-    def objfunc(self, dvars):
+    def objfunc(self, data):
         h = 1.0 # initial y
         mu = 0.3 # coeff of friction
 
         funcs = {}
         y = np.zeros(self.n)
-        y[1:-1] = dvars['y']
+        y[1:-1] = data['y']
         y[0] = h
 
         time_sum = 0
