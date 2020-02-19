@@ -18,6 +18,32 @@ import seaborn as sns
 sns.set_style('whitegrid')
 
 '''
+abs(sigma) < sigma_yield  # okay, but deriv at zero is undefined for abs
+sigma**2 < sigma_yield**2    # bad
+
+---- good case -----
+1) sigma < sigma_yield
+2) sigma > -sigma_yield
+
+1) g =  sigma - sigma_yield
+2) g = -sigma - sigma_yield
+--------------------
+
+----next------
+grad_g = partial(gi)/partial(xj)   ; transpose --> partial(gj)/partial(xi)
+
+
+----next------
+for finite differencing, remember to RESET vector between each loop
+
+----next------
+normmalize/scaling
+instead of g = sigma-sigma_yield, do g = sigma/sigma_yield - 1
+... obj = mass/1000
+
+'''
+
+'''
 A nonlinear, constrained optimization problem for finding the optimal cross-sectional area
 for a 10-bar truss to minimize the overall mass of the structure.
 Objective:
@@ -59,15 +85,14 @@ class truss_solver():
         while self.iterations < 1:
             dm, ds = self.gradient(method, truss, self.areas, self.m, self.s)
 
-
             self.iterations += 1
 
 
         print('...done!')
 
         print(f'method: {method}')
-        print(f'dm/dA: {dm}')
-        print(f'ds/dA: {ds}')
+        print(f'max of dm/dA: {np.max(dm)}')
+        print(f'max of ds/dA: {np.max(ds)}')
 
         return np.zeros(1)
 
@@ -110,7 +135,7 @@ class truss_solver():
             ds[j] = (sj - s)/h
         return dm, ds
 
-    def complex_step(self, func, A, m, s, h=1e-40):
+    def complex_step(self, func, A, m, s, h=1e-20):
         n = len(A)
         dm = np.zeros(n, dtype=np.complex64)
         ds = np.zeros((n, s.size), dtype=np.complex64)

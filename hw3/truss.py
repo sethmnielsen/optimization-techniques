@@ -22,9 +22,9 @@ def truss(A: ndarray):
     Ls = 360 # length of sides
     Ld = np.sqrt(Ls**2 * 2) # length of diagonals
 
-    start = np.array([5, 3, 6, 4, 4, 2, 5, 6, 3, 4], dtype=typ) - 1
-    finish = np.array([3, 1, 4, 2, 3, 1, 4, 3, 2, 1], typ) - 1
-    phi = np.radians(np.array([0, 0, 0, 0, 90, 90, -45, 45, -45, 45])).astype(typ)
+    start = np.array([5, 3, 6, 4, 4, 2, 5, 6, 3, 4]) - 1
+    finish = np.array([3, 1, 4, 2, 3, 1, 4, 3, 2, 1]) - 1
+    phi = np.radians(np.array([0, 0, 0, 0, 90, 90, -45, 45, -45, 45]))
     L1 = np.array([Ls]*6, typ)
     L2 = np.array([Ld]*4, typ)
     L = np.concatenate((L1, L2), axis=0)
@@ -153,10 +153,10 @@ def truss_stress(A):
 
     remove = np.concatenate((removex, removey), axis=0)
 
-    K = onp.delete(K, remove, axis=0)
-    K = onp.delete(K, remove, axis=1)
-    F = onp.delete(F, remove)
-    S = onp.delete(S, remove, axis=1)
+    K = np.delete(K, remove, axis=0)
+    K = np.delete(K, remove, axis=1)
+    F = np.delete(F, remove)
+    S = np.delete(S, remove, axis=1)
 
     d = np.linalg.solve(K, F)
     stress = S @ d
@@ -187,7 +187,7 @@ def bar(E, A, L, phi):
 
     S = E / L * np.array([-c, -s, c, s])
 
-    return K, S
+    return K.astype(A.dtype), S.astype(A.dtype)
 
 '''
 Computes the appropriate indices in the global matrix for
