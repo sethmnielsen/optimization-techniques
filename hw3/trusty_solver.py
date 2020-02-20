@@ -117,6 +117,7 @@ class truss_solver():
         elif method == 'complex':
             dm, ds = self.complex_step(func, A, m, s)
         elif method == 'AD':
+            # jnp.array(A)
             dm, ds = self.algo_diff(func, A, m, s)
         elif method == 'adjoint':
             dm, ds = self.adjoint(func, A, m, s)
@@ -152,7 +153,6 @@ class truss_solver():
 
     def algo_diff(self, func, A, m, s):
         grad_func = jax.grad(func)
-        print(grad_func(A))
 
         return 0, 0
 
