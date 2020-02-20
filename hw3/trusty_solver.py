@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
+import jax
 import jax.numpy as jnp
-from jax import grad, jit, vmap
 from jax.numpy import ndarray
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,8 +12,6 @@ from pyoptsparse.pyOpt_solution import Solution
 from pyoptsparse.pyOpt_optimization import Optimization
 from pyoptsparse.pyOpt_optimizer import Optimizer
 from truss import truss
-from truss import truss_mass
-from truss import truss_stress
 import seaborn as sns
 sns.set_style('whitegrid')
 
@@ -79,7 +77,7 @@ class truss_solver():
         # self.plot_final_results(sol)
 
     def solve_problem(self):
-        method = 'complex'
+        method = 'FD'
         self.m, self.s = truss(self.areas)
         # while self.iterations < self.iters_limit:
         while self.iterations < 1:
@@ -135,13 +133,13 @@ class truss_solver():
             ds[j] = (sj - s)/h
         return dm, ds
 
-    def complex_step(self, func, A, m, s, h=1e-20):
+    def complex_step(self, func, A, m, s, h=1e-40):
         n = len(A)
-        dm = np.zeros(n, dtype=np.complex64)
-        ds = np.zeros((n, s.size), dtype=np.complex64)
-        hi = h+0.j
+        dm = np.zeros(n, dtype=np.complex128)
+        ds = np.zeros((n, s.size), dtype=np.complex128)
+        hi = h*1.j
         for j in range(n):
-            e = np.zeros(n, dtype=np.complex64)
+            e = np.zeros(n, dtype=np.complex128)
             e[j] = hi
             mj, sj = func(A+e)
             # complex step
@@ -150,6 +148,9 @@ class truss_solver():
         return dm, ds
 
     def algo_diff(self, func, A, m, s):
+        grad_func = jax.grad(func)
+        print(grad_func(A))
+
         return 0, 0
 
     def adjoint(self, func, A, m, s):
