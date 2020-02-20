@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
 import jax
 import jax.numpy as jnp
 from jax.numpy import ndarray
