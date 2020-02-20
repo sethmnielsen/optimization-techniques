@@ -168,26 +168,26 @@ def truss_stress_jax(A):
     F = jax.device_put(F)
 
     #setup boundary condition
-    idxx = np.nonzero(rigidx)[0]
-    idxy = np.nonzero(rigidy)[0]
-    removex = node2idx(idxx.tolist(), DOF)
-    tempx = np.reshape(removex, (2,-1), order='F')
-    removey = node2idx(idxy.tolist() , DOF)
-    tempy = np.reshape(removey, (2,-1), order='F')
-    removex = tempx[0,:]
-    removey = tempy[1,:]
+    # idxx = np.nonzero(rigidx)[0]
+    # idxy = np.nonzero(rigidy)[0]
+    # removex = node2idx(idxx.tolist(), DOF)
+    # tempx = np.reshape(removex, (2,-1), order='F')
+    # removey = node2idx(idxy.tolist() , DOF)
+    # tempy = np.reshape(removey, (2,-1), order='F')
+    # removex = tempx[0,:]
+    # removey = tempy[1,:]
 
-    remove = onp.concatenate((removex, removey), axis=0)
-    keep = []
-    for i in range(len(K)):
-        if not i in remove:
-            keep.append(i)
+    # remove = onp.concatenate((removex, removey), axis=0)
+    # keep = []
+    # for i in range(len(K)):
+    #     if not i in remove:
+    #         keep.append(i)
 
-    keep = np.array(keep)
-    keep_mesh = np.meshgrid(keep, keep, indexing='ij')
-    K = K[keep_mesh]
-    F = F[keep]
-    S = S[:,keep]
+    # keep = np.array(keep)
+    # keep_mesh = np.meshgrid(keep, keep, indexing='ij')
+    # K = K[keep_mesh]
+    # F = F[keep]
+    # S = S[:,keep]
 
 
     # Knp = onp.delete(Knp, remove, axis=0)
@@ -202,6 +202,10 @@ def truss_stress_jax(A):
     # K = np.array(Knp)
     # S = np.array(Snp)
     # F = np.array(Fnp)
+
+    K = K[:8,:8]
+    F = F[:8]
+    S = S[:, :8]
 
     d = sp.linalg.solve(K, F)
     stress = S @ d

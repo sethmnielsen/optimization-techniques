@@ -5,6 +5,7 @@
     "version": "0.2.0",
     "configurations": [
 
+
         {
             "name": "hw1: brachi.py",
             "type": "python",
@@ -34,6 +35,14 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/hw3/trusty_solver.py",
+            "cwd": "${workspaceFolder}/hw3",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "hw3: jax_testing.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/hw3/jax_testing.py",
             "cwd": "${workspaceFolder}/hw3",
             "console": "integratedTerminal"
         },
