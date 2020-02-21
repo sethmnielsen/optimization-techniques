@@ -56,14 +56,16 @@ def algo_diff(A:ndarray, m:float, s:ndarray):
     return dm, ds
 
 def adjoint(A:ndarray, m:float, s):
-    return 0, 0
+    m, s, dm, ds = truss_adjoint(A)
+
+    return dm, ds
 
 
 if __name__ == '__main__':
     # import jax.numpy as np
     A = np.ones(10)
     m, s = truss(A)
-    method = 'AD'
+    method = 'adjoint'
 
     dm, ds = get_derivatives(method, A, m, s)
 

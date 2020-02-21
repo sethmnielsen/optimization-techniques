@@ -45,6 +45,14 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "hw3: derivatives.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/hw3/derivatives.py",
+            "cwd": "${workspaceFolder}/hw3",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "Python: Current File (Integrated Terminal)",
             "type": "python",
             "request": "launch",

@@ -1,5 +1,3 @@
 {
-    "python.linting.pylintEnabled": true,
-    "python.linting.enabled": true,
     "python.autoComplete.extraPaths": ["/home/seth/school/optimization"]
 }

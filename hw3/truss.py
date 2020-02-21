@@ -135,33 +135,22 @@ def truss_stress_jax(A):
     K: np.DeviceArray = np.zeros((DOF * n, DOF * n))
     S: np.DeviceArray = np.zeros((nbar, DOF * n))
 
-    # Knp: ndarray = onp.zeros((DOF * n, DOF * n))
-    # Snp: ndarray = onp.zeros((nbar, DOF * n))
     for i in range(nbar): #loop through each bar
         Ksub, Ssub = bar(E[i], A[i], L[i], phi[i])
         idx = node2idx([start[i], finish[i]], DOF)
         idxx, idxy = onp.meshgrid(idx,idx)
 
-        # Knp[idxy, idxx] += Ksub
-        # K[idxy, idxx] += Ksub
         K = jax.ops.index_add(K, [idxy, idxx], Ksub)
 
-        # Snp[i, idx] = Ssub
-        # S[i, idx] = Ssub
         S = jax.ops.index_update(S, [i, idx], Ssub)
 
     #setup applied loads
-    # Fnp: ndarray = onp.zeros(n * DOF)
     F: np.DeviceArray = np.zeros(n * DOF)
     K = jax.device_put(K)
     S = jax.device_put(S)
 
     for i in range(n):
         idx = node2idx([i], DOF)
-        # Fnp[idx[0]] = Fx[i]
-        # Fnp[idx[1]] = Fy[i]
-        # F[idx[0]] = Fx[i]
-        # F[idx[1]] = Fy[i]
         F = jax.ops.index_update(F, idx[0], Fx[i])
         F = jax.ops.index_update(F, idx[1], Fy[i])
 
@@ -178,39 +167,98 @@ def truss_stress_jax(A):
     removey = tempy[1,:]
 
     remove = onp.concatenate((removex, removey), axis=0)
-    keep = []
-    for i in range(len(K)):
-        if not i in remove:
-            keep.append(i)
-
-    keep = np.array(keep)
-    keep_mesh = np.meshgrid(keep, keep, indexing='ij')
-    K = K[keep_mesh]
-    F = F[keep]
-    S = S[:,keep]
 
 
-    # Knp = onp.delete(Knp, remove, axis=0)
-    # Knp = onp.delete(Knp, remove, axis=1)
-    # Fnp = onp.delete(Fnp, remove)
-    # Snp = onp.delete(Snp, remove, axis=1)
-    # K = np.delete(K, remove, axis=0)
-    # K = np.delete(K, remove, axis=1)
-    # F = np.delete(F, remove)
-    # S = np.delete(S, remove, axis=1)
-
-    # K = np.array(Knp)
-    # S = np.array(Snp)
-    # F = np.array(Fnp)
-
-    # K = K[:8,:8]
-    # F = F[:8]
-    # S = S[:, :8]
+    K = K[:8,:8]
+    F = F[:8]
+    S = S[:, :8]
 
     d = sp.linalg.solve(K, F)
     stress = S @ d
 
     return stress
+
+def truss_adjoint(A):
+    P = 1e5 # applied loads
+    Ls = 360 # length of sides
+    Ld = np.sqrt(360**2 * 2) # length of diagonals
+
+    start = np.array([5, 3, 6, 4, 4, 2, 5, 6, 3, 4]) - 1
+    finish = np.array([3, 1, 4, 2, 3, 1, 4, 3, 2, 1]) - 1
+    phi = np.deg2rad(np.array([0, 0, 0, 0, 90, 90, -45, 45, -45, 45]))
+    L = np.concatenate(([Ls] * 6, [Ld] * 4), axis=0)
+
+    nbar = np.size(A)
+    E = 1e7 * np.ones( nbar) # modulus of elasticity
+    rho = 0.1 * np.ones(nbar) # material density
+
+    Fx = np.zeros(6, dtype=float)
+    Fy = np.array([0.0, -P, 0.0, -P, 0.0, 0.0])
+    rigidx = np.array([0, 0, 0, 0, 1, 1])
+    rigidy = np.array([0, 0, 0, 0, 1, 1])
+
+    n = np.size(Fx) #number of nodes
+    DOF = 2
+
+    # compute mass
+    mass = np.sum(rho * A * L)
+    dmdA = np.empty_like(A)
+
+    # assemble global matrices
+    K = np.zeros((DOF * n, DOF * n))
+    dKdA = np.zeros((DOF * n, DOF * n, nbar))
+    S = np.zeros((nbar, DOF * n))
+
+    for i in range(nbar): #loop through each bar
+        dmdA[i] = rho[i] * L[i]
+        Ksub, Ssub = bar(E[i], A[i], L[i], phi[i])
+        dKdAsub = Ksub / A[i]
+        idx = node2idx([start[i], finish[i]], DOF)
+        idxx, idxy = np.meshgrid(idx,idx)
+
+        K[idxy, idxx] += Ksub
+        dKdA_i = np.zeros((DOF * n, DOF * n))
+        dKdA_i[idxy, idxx] += dKdAsub
+        dKdA[:,:,i] = dKdA_i
+        S[i, idx] = Ssub
+
+
+    #setup applied loads
+    F = np.zeros(n * DOF)
+
+    for i in range(n):
+        idx = node2idx([i], DOF)
+        F[idx[0]] = Fx[i]
+        F[idx[1]] = Fy[i]
+
+    #setup boundary condition
+    idxx = np.argwhere(rigidx).squeeze()
+    idxy = np.argwhere(rigidy).squeeze()
+    removex = node2idx(idxx.tolist(), DOF)
+    tempx = np.reshape(removex, (2,-1), order='F')
+    removey = node2idx(idxy.tolist() , DOF)
+    tempy = np.reshape(removey, (2,-1), order='F')
+    removex = tempx[0,:]
+    removey = tempy[1,:]
+
+    remove = np.concatenate((removex, removey), axis=0)
+
+    K = np.delete(K, remove, axis=0)
+    K = np.delete(K, remove, axis=1)
+    dKdA = np.delete(dKdA, remove, axis=0)
+    dKdA = np.delete(dKdA, remove, axis=1)
+    F = np.delete(F, remove)
+    S = np.delete(S, remove, axis=1)
+
+    d = np.linalg.solve(K, F)
+    stress = S @ d
+
+
+    dsdA = np.zeros((nbar, nbar))
+    for i in range(nbar):
+        dsdA[:,i] = -S @ np.linalg.inv(K) @ dKdA[:,:,i] @ d
+
+    return mass, stress, dmdA, dsdA
 
 
 '''
