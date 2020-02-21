@@ -14,9 +14,12 @@ import pyoptsparse as pyop
 from pyoptsparse.pyOpt_solution import Solution
 from pyoptsparse.pyOpt_optimization import Optimization
 from pyoptsparse.pyOpt_optimizer import Optimizer
-from truss import truss
 import seaborn as sns
 sns.set_style('whitegrid')
+
+
+from truss import truss
+import derivatives as deriv
 
 '''
 abs(sigma) < sigma_yield  # okay, but deriv at zero is undefined for abs
@@ -84,7 +87,8 @@ class truss_solver():
         self.m, self.s = truss(self.areas)
         # while self.iterations < self.iters_limit:
         while self.iterations < 1:
-            dm, ds = self.gradient(method, truss, self.areas, self.m, self.s)
+            # dm will be vector, ds will be matrix
+            dm, ds = deriv.get_derivatives(method, self.areas, self.m, self.s)
 
             self.iterations += 1
 
@@ -96,68 +100,6 @@ class truss_solver():
         print(f'max of ds/dA: {np.max(ds)}')
 
         return np.zeros(1)
-
-    def objfunc(self, x):
-        pass
-        # mass, stress = truss(x)  # <---- I need to supply the derivative here
-        # m_b, s_b = truss(x)
-        # self.compute_derivatives(x)
-
-        # self.mass_hist.append(mass)
-        # self.stress_hist.append(stress)
-        # return funcs
-
-    # def compute_derivatives(self, areas):
-    #     mass, stress = truss(areas)
-    #     return mass, stress
-
-    def gradient(self, method: str, func, A:ndarray, m, s) -> (ndarray):
-        if method == 'FD':
-            dm, ds = self.finite_diff(func, A, m, s)
-        elif method == 'complex':
-            dm, ds = self.complex_step(func, A, m, s)
-        elif method == 'AD':
-            # jnp.array(A)
-            dm, ds = self.algo_diff(func, A, m, s)
-        elif method == 'adjoint':
-            dm, ds = self.adjoint(func, A, m, s)
-
-        return dm, ds
-
-    def finite_diff(self, func, A:ndarray, m, s, h=1e-8) -> (ndarray):
-        n = len(A)
-        dm = np.zeros(n)
-        ds = np.zeros((n,s.size))
-        for j in range(n):
-            e = np.zeros(n)
-            e[j] = h
-            mj, sj = func(A+e)
-            # forward differencing
-            dm[j] = (mj - m)/h
-            ds[j] = (sj - s)/h
-        return dm, ds
-
-    def complex_step(self, func, A, m, s, h=1e-40):
-        n = len(A)
-        dm = np.zeros(n, dtype=np.complex128)
-        ds = np.zeros((n, s.size), dtype=np.complex128)
-        hi = h*1.j
-        for j in range(n):
-            e = np.zeros(n, dtype=np.complex128)
-            e[j] = hi
-            mj, sj = func(A+e)
-            # complex step
-            dm[j] = np.imag(mj)/h
-            ds[j] = np.imag(sj)/h
-        return dm, ds
-
-    def algo_diff(self, func, A, m, s):
-        grad_func = jax.grad(func)
-
-        return 0, 0
-
-    def adjoint(self, func, A, m, s):
-        return 0, 0
 
     def plot_final_results(self, sol):
         fig, axes = plt.subplots(nrows=3, ncols=1, sharex=False)
