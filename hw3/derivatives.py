@@ -50,7 +50,10 @@ def algo_diff(A:ndarray, m:float, s:ndarray):
     grad_mass = jax.grad(truss_mass_jax)
     grad_stresses = jax.jacfwd(truss_stress_jax)
 
-    return 0, 0
+    dm = grad_mass(A)
+    ds = grad_stresses(A)
+
+    return dm, ds
 
 def adjoint(A:ndarray, m:float, s):
     return 0, 0
@@ -60,7 +63,7 @@ if __name__ == '__main__':
     # import jax.numpy as np
     A = np.ones(10)
     m, s = truss(A)
-    method = 'FD'
+    method = 'AD'
 
     dm, ds = get_derivatives(method, A, m, s)
 
