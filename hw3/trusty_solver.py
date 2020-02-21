@@ -41,9 +41,9 @@ grad_g = partial(gi)/partial(xj)   ; transpose --> partial(gj)/partial(xi)
 for finite differencing, remember to RESET vector between each loop
 
 ----next------
-normmalize/scaling
+normalize/scaling
 instead of g = sigma-sigma_yield, do g = sigma/sigma_yield - 1
-... obj = mass/1000
+obj = mass/1000
 
 '''
 
@@ -51,13 +51,13 @@ instead of g = sigma-sigma_yield, do g = sigma/sigma_yield - 1
 A nonlinear, constrained optimization problem for finding the optimal cross-sectional area
 for a 10-bar truss to minimize the overall mass of the structure.
 Objective:
-  mass -> 0
+    mass -> 0
 Design Variables:
-  Cross-sectional area of each bar
+    Cross-sectional area of each bar
 Constraints:
-  s >= -s_y : each bar must not yield in compression
-  s <=  s_y : each bar must not yield in tension
-  area >= 0.1 sq-in (bound constraint)
+    s >= -s_y : each bar must not yield in compression
+    s <=  s_y : each bar must not yield in tension
+    area >= 0.1 sq-in (bound constraint)
 
 *may need to consider scaling the objective and constraints
 '''
@@ -79,11 +79,47 @@ class truss_solver():
         self.iters_limit = 1e4
 
     def run(self):
+        self.init_problem()
         sol = self.solve_problem()
         # self.plot_final_results(sol)
 
+    def objfunc(self, data):
+        x = data['areas']
+        funcs = {}
+        mass, stress = truss(x)
+        funcs['mass'] = mass
+        funcs['stress_arr'] = stress
+
+        self.mass_hist.append(mass)
+        self.stress_hist.append(stress)
+        return funcs
+
+    def init_problem(self):
+        # Optimization problem
+        self.opt_prob: pyop.Optimization = pyop.Optimization('trusty', self.objfunc)
+        # Design variables
+        self.opt_prob.addVarGroup('areas', nVars=10, type='c', value=self.areas, \
+                                  lower=0.1, upper=None)
+
+        # Constraints
+        # yield_compression, yield_tension, area_min
+        stress_yield = np.array([25e3]*10)
+        stress_yield[8] = 75e3
+        self.opt_prob.addConGroup('stress_arr', nCon=10, lower=-stress_yield, upper=stress_yield)
+
+        # Assign the key value for the objective function
+        self.opt_prob.addObj('mass')
+
+
+        self.optimizer = pyop.SNOPT()
+        self.optimizer.setOption('iPrint',0)
+        path = '/home/seth/school/optimization/output/'
+        self.optimizer.setOption('Print file', path+f'SNOPT_print.out')
+        self.optimizer.setOption('Summary file', path+f'SNOPT_summary.out')
+
     def solve_problem(self):
         method = 'FD'
+        sol: Solution = self.optimizer(self.opt_prob, sensType='FD')
         self.m, self.s = truss(self.areas)
         # while self.iterations < self.iters_limit:
         while self.iterations < 1:
@@ -98,6 +134,12 @@ class truss_solver():
         print(f'method: {method}')
         print(f'max of dm/dA: {np.max(dm)}')
         print(f'max of ds/dA: {np.max(ds)}')
+        print(f'Final mass: {sol.fStar}')
+        print(f'Stresses:   {sol.constraints["stress_arr"].value}')
+        print(f'Areas:      {sol.xStar["areas"]}')
+        print(f'Number of function calls: {sol.userObjCalls}')
+
+        return sol
 
         return np.zeros(1)
 
