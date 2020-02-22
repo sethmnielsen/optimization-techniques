@@ -34,7 +34,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/hw3/trusty_solver.py",
             "cwd": "${workspaceFolder}/hw3",
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "justMyCode": false
         },
         {
             "name": "hw3: jax_testing.py",

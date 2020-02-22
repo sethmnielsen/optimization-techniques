@@ -86,7 +86,7 @@ class truss_solver():
 
         self.mass_hist.append(mass)
         self.stress_hist.append(stress)
-        return funcs
+        return funcs, False
 
     def plot_final_results(self, sol):
         fig, axes = plt.subplots(nrows=3, ncols=1, sharex=False)

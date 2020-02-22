@@ -92,7 +92,7 @@ class truss_solver():
 
         self.mass_hist.append(mass)
         self.stress_hist.append(stress)
-        return funcs
+        return funcs, False
 
     def init_problem(self):
         # Optimization problem
@@ -119,7 +119,7 @@ class truss_solver():
 
     def solve_problem(self):
         method = 'FD'
-        sol: Solution = self.optimizer(self.opt_prob, sensType='FD')
+        sol: Solution = self.optimizer(self.opt_prob, sens='FD')
         self.m, self.s = truss(self.areas)
         # while self.iterations < self.iters_limit:
         while self.iterations < 1:
@@ -140,8 +140,6 @@ class truss_solver():
         print(f'Number of function calls: {sol.userObjCalls}')
 
         return sol
-
-        return np.zeros(1)
 
     def plot_final_results(self, sol):
         fig, axes = plt.subplots(nrows=3, ncols=1, sharex=False)
