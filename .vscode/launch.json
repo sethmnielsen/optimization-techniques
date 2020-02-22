@@ -51,7 +51,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/hw3/derivatives.py",
             "cwd": "${workspaceFolder}/hw3",
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "justMyCode": false
         },
         {
             "name": "Python: Current File (Integrated Terminal)",

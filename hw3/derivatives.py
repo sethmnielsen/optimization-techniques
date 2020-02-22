@@ -5,18 +5,18 @@ from truss import *
 
 def get_derivatives(method, A:ndarray, m:float, s:ndarray):
     if method == 'FD':
-        dm, ds = finite_diff(A, m, s)
+        dm, ds = finite_diff(A)
     elif method == 'complex':
-        dm, ds = complex_step(A, m, s)
+        dm, ds = complex_step(A)
     elif method == 'AD':
-        # jnp.array(A)
         dm, ds = algo_diff(A, m, s)
     elif method == 'adjoint':
-        dm, ds = adjoint(A, m, s)
+        m, s, dm, ds = adjoint(A)
 
-    return dm, ds
+    return m, s, dm, ds
 
-def finite_diff(A:ndarray, m:float, s:ndarray, h=1e-8) -> (ndarray):
+def finite_diff(A:ndarray, h=1e-8) -> (ndarray):
+    m, s = truss(A)
     n = len(A)
     dm = np.zeros(n)
     ds = np.zeros((n,s.size))
@@ -29,7 +29,7 @@ def finite_diff(A:ndarray, m:float, s:ndarray, h=1e-8) -> (ndarray):
         ds[j] = (sj - s)/h
     return dm, ds
 
-def complex_step(A:ndarray, m:float, s:ndarray, h=1e-40):
+def complex_step(A:ndarray, h=1e-40):
     n = len(A)
     dm = np.zeros(n, dtype=np.complex128)
     ds = np.zeros((n, s.size), dtype=np.complex128)
@@ -47,27 +47,29 @@ def complex_step(A:ndarray, m:float, s:ndarray, h=1e-40):
 def algo_diff(A:ndarray, m:float, s:ndarray):
     import jax
 
-    grad_mass = jax.grad(truss_mass_jax)
-    grad_stresses = jax.jacfwd(truss_stress_jax)
+    val_grad_mass = jax.value_and_grad(truss_mass_jax)
+    jac_stresses = jax.jacfwd(truss_stress_jax)
 
-    dm = grad_mass(A)
-    ds = grad_stresses(A)
+    m, dm = val_grad_mass(A)
+    ds = jac_stresses(A)
 
     return dm, ds
 
-def adjoint(A:ndarray, m:float, s):
+def adjoint(A:ndarray):
     m, s, dm, ds = truss_adjoint(A)
 
-    return dm, ds
+    return m, s, dm, ds
 
 
 if __name__ == '__main__':
     # import jax.numpy as np
     A = np.ones(10)
     m, s = truss(A)
-    method = 'adjoint'
+    method = 'AD'
 
-    dm, ds = get_derivatives(method, A, m, s)
+    m, s, dm, ds = get_derivatives(method, A, m, s)
 
+    print(f'\nm: {m}')
+    print(f'\nstresses: {s}')
     print(f'\ndm: {dm}')
     print(f'\nds: {ds}')
