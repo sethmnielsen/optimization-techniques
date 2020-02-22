@@ -110,7 +110,7 @@ def truss_stress_jax(A):
 
     P = 1e5 # applied loads
     Ls = 360 # length of sides
-    Ld = np.sqrt(360**2 * 2) # length of diagonals
+    Ld = np.sqrt(Ls**2 * 2) # length of diagonals
 
     start = np.array([5, 3, 6, 4, 4, 2, 5, 6, 3, 4]) - 1
     finish = np.array([3, 1, 4, 2, 3, 1, 4, 3, 2, 1]) - 1

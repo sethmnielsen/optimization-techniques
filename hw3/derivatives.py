@@ -34,8 +34,8 @@ def complex_step(A:ndarray, h=1e-40):
     m, s = truss(A)
 
     n = len(A)
-    dm = np.zeros(n, dtype=np.complex128)
-    ds = np.zeros((n, s.size), dtype=np.complex128)
+    dm = np.zeros(n)
+    ds = np.zeros((n, s.size))
     hi = h*1.j
     for j in range(n):
         e = np.zeros(n, dtype=np.complex128)
@@ -74,7 +74,6 @@ def relative_errors(dm_arr, ds_arr, dm_true, ds_true):
         errors_mass:   (10)
         errors_stress: (10,10)
     '''
-    errors_mass = np.zeros(3)
     errors_mass = np.mean( (dm_arr - dm_true)/dm_true, axis=1 )
     errors_stress = np.mean( (ds_arr - ds_true)/ds_true, axis=1 )
 
@@ -82,42 +81,30 @@ def relative_errors(dm_arr, ds_arr, dm_true, ds_true):
 
 
 if __name__ == '__main__':
-    A_list = [np.ones(10)]
-    A_list.append(np.random.randn(9))
+    A_list = np.zeros((10,10))
+    A_list[0] = np.ones(10)
+    A_list[1:] = np.random.randn(9,10)
     methods = ['FD', 'complex', 'AD', 'adjoint']
 
-    errors_mass = []
-    errors_stress = []
-    dm_arr = np.zeros((4,10))
-    ds_arr = np.zeros((4,10,10))
-    # filename = 'derivative errors'
-    # with expression as target:
-        # pass
+    dm_arr = np.zeros((4,10,10))
+    ds_arr = np.zeros((4,10,10,10))
     for i, method in enumerate(methods):
-        mass_arr = []
-        stress_arr = []
         for j, A in enumerate(A_list):
             m, s, dm, ds = get_derivatives(method, A)
-            # mass_arr.append(m)
-            # stress_arr.append(s)
             dm_arr[i,j] = dm
             ds_arr[i,j] = ds
-        # m_np.append(np.array(mass_arr))
-        # s_np.append(np.array(stress_arr))
-        # errors_mass.append(em)
-        # errors_stress.append(es)
 
     em, es = relative_errors(dm_arr[:-1], ds_arr[:-1], dm_arr[-1], ds_arr[-1])
+
     dm_avg = np.mean(dm_arr, axis=1)
     ds_avg = np.mean(ds_arr, axis=1)
-    # err_m_avg = np.mean(errors_mass)
-    # err_s_avg = np.mean(errors_stress)
 
+    np.set_printoptions(linewidth=200)
     print(f'\n-----MEAN VALUES-----')
-    print(f'errors_mass: {em}')
-    print(f'\nerrors_stress: {es}')
+    print(f'\n\nerrors_mass:\n{em}')
+    print(f'\nerrors_stress:\n{es}')
 
     # print(f'\nmasses: {m_np_avg}')
     # print(f'\nstress arrays: {s_np_avg}')
-    print(f'\ndm: {dm_avg}')
-    print(f'\nds: {ds_avg}')
+    print(f'\n\n\ndm: \n{dm_avg}')
+    print(f'\n\nds: \n{ds_avg}')

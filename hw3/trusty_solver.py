@@ -72,9 +72,6 @@ class truss_solver():
         # self.areas = np.ones(self.n) * 0.1
         self.areas = np.ones(self.n)
 
-        self.stress_yield = np.array([25e3]*self.n)
-        self.stress_yield[8] = 75e3
-
         self.iterations = 0
         self.iters_limit = 1e4
 
