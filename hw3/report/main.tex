@@ -1,0 +1,72 @@
+\documentclass{article}
+
+% --- load packages ---
+
+\usepackage[margin=1in]{geometry} % change the margins
+\usepackage{amsmath} % useful math environments and commands like align
+\usepackage[colorlinks,bookmarks,bookmarksnumbered,allcolors=blue]{hyperref} % hyperlinks between references
+\usepackage{graphicx}  % include images
+\usepackage[caption=false]{subfig} % subfigures.  false option prevents conflicts in caption styling with other packages
+\usepackage{booktabs} % better tables
+\usepackage[capitalise]{cleveref} % better referencing. uses cref.
+\usepackage[section]{placeins} % sometimes useful to prevent figures from floating out of a section
+\usepackage{cite} % handles multiple citations in one command better
+\usepackage{doi} % allow correct hypderlinking of DOIs
+
+
+
+\begin{document}
+
+\title{ME 575 - Homework 3}
+\author{Seth Nielsen}
+% put in \date{} if you don't want a date to appear, or enter a specific date, otherwise default is today's date.
+\date{}
+\maketitle
+
+\section*{Abstract}
+
+To find optimal values for the Brachistochrone and truss problems, I used the pyOptSparse (PYthon OPTimization Sparse) framework. The optimization problem was solved using the SNOPT algorithm.
+\section{Truss Derivatives}
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.75\textwidth]{figures/curve.png}
+	\caption{\label{fig:}}
+	\end{figure}
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.75\textwidth]{figures/dimensions.png}
+	\caption{The effect of dimensionality on calculated travel time (top), the wall time for computing the optimal values (middle), and the number of function evaluations for convergence (bottom).}
+	\label{fig:results}
+\end{figure}
+
+
+\section{Truss}
+It is interesting to note that bar 9, the bar made of the strongest material, was allowed to have the highest stress of any of the bars.
+
+\begin{table}[htb]
+	\begin{center}
+        \caption{Comparison of number of function calls required for convergence.\label{tab:mytable}}
+		\begin{tabular}{c|c|c|c}
+			\toprule
+			\textbf{Algorithm} & Matyas & Rosenbrock & Brachis. \\
+			\midrule
+			\textbf{Custom} & 7.9 & 25e3 & 0 \\
+			\textbf{pyOptSparse: SNOPT} & 0.14 & 11309 \\
+			\bottomrule
+		\end{tabular}
+	\end{center}
+\end{table}
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.75\textwidth]{figures/truss_plot.png}
+	\caption{Convergence of objective value over function evaluations. The bottom plot is the same as the middle, but zoomed in for clarity.}
+	\label{fig:results}
+\end{figure}
+
+% This is for the bibliography.  Note that it is using sample.bib
+% you would need to provide your own bibtex file.
+
+\end{document}

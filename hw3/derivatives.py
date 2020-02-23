@@ -99,7 +99,8 @@ if __name__ == '__main__':
     dm_avg = np.mean(dm_arr, axis=1)
     ds_avg = np.mean(ds_arr, axis=1)
 
-    np.set_printoptions(linewidth=200)
+    # np.set_printoptions(linewidth=200, precision=20)
+    np.set_printoptions(precision=6, linewidth=200, floatmode='maxprec', suppress=False)
     print(f'\n-----MEAN VALUES-----')
     print(f'\n\nerrors_mass:\n{em}')
     print(f'\nerrors_stress:\n{es}')
