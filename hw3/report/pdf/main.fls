@@ -122,13 +122,7 @@ INPUT /usr/local/texlive/2019/texmf-dist/fonts/tfm/public/cm/cmex10.tfm
 INPUT /usr/local/texlive/2019/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex8.tfm
 INPUT /usr/local/texlive/2019/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm
 INPUT /home/seth/.texlive2019/texmf-var/luatex-cache/generic/fonts/otl/lmroman12-bold.luc
-INPUT ./figures/curve.png
-INPUT ./figures/curve.png
-INPUT ./figures/curve.png
-INPUT ./figures/dimensions.png
-INPUT ./figures/dimensions.png
-INPUT ./figures/dimensions.png
-INPUT /usr/local/texlive/2019/texmf-var/fonts/map/pdftex/updmap/pdftex.map
+INPUT /home/seth/.texlive2019/texmf-var/luatex-cache/generic/fonts/otl/lmmono10-regular.luc
 INPUT /usr/local/texlive/2019/texmf-dist/fonts/tfm/public/cm/cmr10.tfm
 INPUT /usr/local/texlive/2019/texmf-dist/fonts/tfm/public/cm/cmr7.tfm
 INPUT /usr/local/texlive/2019/texmf-dist/fonts/tfm/public/cm/cmr5.tfm
@@ -142,7 +136,7 @@ INPUT /usr/local/texlive/2019/texmf-dist/fonts/tfm/public/cm/cmex10.tfm
 INPUT /usr/local/texlive/2019/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm
 INPUT /usr/local/texlive/2019/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm
 INPUT /home/seth/.texlive2019/texmf-var/luatex-cache/generic/fonts/otl/lmroman10-bold.luc
-INPUT ./figures/truss_plot.png
-INPUT ./figures/truss_plot.png
-INPUT ./figures/truss_plot.png
+INPUT /usr/local/texlive/2019/texmf-var/fonts/map/pdftex/updmap/pdftex.map
 INPUT pdf/main.aux
+INPUT /usr/local/texlive/2019/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb
+INPUT /usr/local/texlive/2019/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb

@@ -13,32 +13,48 @@
 \usepackage{cite} % handles multiple citations in one command better
 \usepackage{doi} % allow correct hypderlinking of DOIs
 
-
+\newcommand{\code}[1]{\texttt{#1}}
 
 \begin{document}
 
-\title{ME 575 - Homework 3}
+\title{ME 575 --- Homework 3}
 \author{Seth Nielsen}
 % put in \date{} if you don't want a date to appear, or enter a specific date, otherwise default is today's date.
 \date{}
 \maketitle
 
-\section*{Abstract}
+\section*{Introduction}
 
-To find optimal values for the Brachistochrone and truss problems, I used the pyOptSparse (PYthon OPTimization Sparse) framework. The optimization problem was solved using the SNOPT algorithm.
+For this assignment, I worked on optimizing the same 10-bar truss problem from the first homework, but with the gradients for the objective and the contraints provided by my own algorithms. I did the assignment entirely in Python 3. The following four approaches were used for computing the gradients:
+
+\begin{enumerate}
+	\item Forward-difference
+	\item Complex-step
+	\item Forward-mode autodifferentiation (provided by Google's \texttt{JAX} library)
+	\item Analytic adjoint
+\end{enumerate}
+
 \section{Truss Derivatives}
 
+Let $A$ be the array containing the cross-sectional areas of the ten bars that make up the truss. Let $m$ be the total mass of the truss. Let $\sigma$ be the array containing the stress on each of the ten bars. The derivatives calculated by each of the four methods were:
+\begin{itemize}
+	\item $ \displaystyle \frac{dm}{dA} $ --- mass with respect to each cross-sectional area (array of size 10)
+	\item $ \displaystyle \frac{d\sigma}{dA} $ --- all stresses with respect to each cross-sectional area (2D-array of size 10$\times$10)
+\end{itemize}
+
+The 
+
 \begin{figure}[htbp]
-	\centering
-	\includegraphics[width=0.75\textwidth]{figures/curve.png}
-	\caption{\label{fig:}}
-	\end{figure}
+	\begin{center}
+		% \includegraphics[width=0.75\textwidth]{figures/curve.png}
+		\caption{\label{fig:brachcurve}}
+	\end{center}
+\end{figure}
 
 \begin{figure}[htbp]
 	\centering
-	\includegraphics[width=0.75\textwidth]{figures/dimensions.png}
-	\caption{The effect of dimensionality on calculated travel time (top), the wall time for computing the optimal values (middle), and the number of function evaluations for convergence (bottom).}
-	\label{fig:results}
+	% \includegraphics[width=0.75\textwidth]{figures/dimensions.png}
+	\caption{\label{fig:dimensions}}
 \end{figure}
 
 
@@ -47,8 +63,8 @@ It is interesting to note that bar 9, the bar made of the strongest material, wa
 
 \begin{table}[htb]
 	\begin{center}
-        \caption{Comparison of number of function calls required for convergence.\label{tab:mytable}}
-		\begin{tabular}{c|c|c|c}
+		\caption{Comparison of number of function calls required for convergence.\label{tab:mytable}}
+		\begin{tabular}{c c c c}
 			\toprule
 			\textbf{Algorithm} & Matyas & Rosenbrock & Brachis. \\
 			\midrule
@@ -61,9 +77,8 @@ It is interesting to note that bar 9, the bar made of the strongest material, wa
 
 \begin{figure}[htbp]
 	\centering
-	\includegraphics[width=0.75\textwidth]{figures/truss_plot.png}
-	\caption{Convergence of objective value over function evaluations. The bottom plot is the same as the middle, but zoomed in for clarity.}
-	\label{fig:results}
+	% \includegraphics[width=0.75\textwidth]{figures/truss_plot.png}
+	\caption{Convergence of objective value over function evaluations. The bottom plot is the same as the middle, but zoomed in for clarity.\label{fig:results}}
 \end{figure}
 
 % This is for the bibliography.  Note that it is using sample.bib
