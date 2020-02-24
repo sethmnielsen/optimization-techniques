@@ -4,6 +4,7 @@
 *.hst
 output/
 hw2/plotter.py
+*pdf/
 
 
 # Byte-compiled / optimized / DLL files

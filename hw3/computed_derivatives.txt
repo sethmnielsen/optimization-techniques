@@ -1,0 +1,28 @@
+mass avg: 443.7654511984237, max: 585.2168601941344
+stress avg: 11306.43691478093, max: 1433928.7566586027
+                                                     
+dm avg: 41.96467525214417, max: 50.91169441584498
+ds avg: -3006.7112023068753, max: 6021875.824214183
+                                                     
+                                                     
+---- For A = np.ones(10)
+
+mean mass error for each method: [ 7.39109753e-06  0.00000000e+00  0.00000000e+00]
+mean stress error for each method: [ 2.71446719e-01  1.84318837e-09  2.95593665e-10]
+                                                     
+                                                     
+                                                     
+                                                     
+                                                     
+-----MEAN VALUES-----
+                                                     
+-- Random areas
+mean mass error for each method: [ 7.26401808e-07  0.00000000e+00  0.00000000e+00]
+mean stress error for each method: [ 4.15404514e-02  7.68644189e-10  1.64377792e-10]
+                                                     
+                                                     
+-----MAX VALUES-----
+                                                     
+-- Random areas
+max mass error for each method: [ 1.88570408e-05  0.00000000e+00  0.00000000e+00]
+max stress error for each method: [ 1.97270024e+00  2.71107938e-08  1.05571766e-08]

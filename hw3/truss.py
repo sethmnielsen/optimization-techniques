@@ -16,7 +16,13 @@ Outputs:
 mass: float mass of the entire structure
 stress: array of length 10 with corresponding stress in each bar
 '''
+func_calls_fd = 0
+func_calls_adj = 0
+
 def truss(A: ndarray):
+    global func_calls_fd
+    func_calls_fd += 1
+    
     typ = A.dtype
     P = 1e5 # applied loads
     Ls = 360 # length of sides
@@ -85,7 +91,7 @@ def truss(A: ndarray):
 
     return mass, stress
 
-def truss_mass_jax(A):
+def mass_jax(A):
     import jax.numpy as np
     import numpy as onp
 
@@ -103,7 +109,7 @@ def truss_mass_jax(A):
 
     return mass
 
-def truss_stress_jax(A):
+def stress_jax(A):
     import jax.numpy as np
     import jax.scipy as sp
     import numpy as onp
@@ -178,7 +184,10 @@ def truss_stress_jax(A):
 
     return stress
 
-def truss_adjoint(A):
+def adjoint(A):
+    global func_calls_adj
+    func_calls_adj += 1
+
     P = 1e5 # applied loads
     Ls = 360 # length of sides
     Ld = np.sqrt(360**2 * 2) # length of diagonals

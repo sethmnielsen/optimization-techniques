@@ -18,9 +18,9 @@ import seaborn as sns
 sns.set_style('whitegrid')
 
 
-from truss import truss
 import derivatives as deriv
 
+#region
 '''
 abs(sigma) < sigma_yield  # okay, but deriv at zero is undefined for abs
 sigma**2 < sigma_yield**2    # bad
@@ -61,34 +61,45 @@ Constraints:
 
 *may need to consider scaling the objective and constraints
 '''
+#endregion
 
-class truss_solver():
-    def __init__(self):
-        self.func_evals = 0
+class truss_solver:
+    def __init__(self, method, areas=None):
+        self.method = method
+        self.func_calls = 0
         self.mass_hist = []
         self.stress_hist = []
+        self.eval_hist = []
+        deriv.truss.func_calls_fd = 0
+        deriv.truss.func_calls_adj = 0
 
         self.n = 10
         # self.areas = np.ones(self.n) * 0.1
         self.areas = np.ones(self.n)
+        
+        if areas is not None:
+            self.areas = areas
+        else:
+            self.areas = np.ones(self.n)
 
         self.iterations = 0
         self.iters_limit = 1e4
 
-    def run(self):
-        self.init_problem()
-        sol = self.solve_problem()
-        # self.plot_final_results(sol)
-
     def objfunc(self, data):
         x = data['areas']
         funcs = {}
-        mass, stress = truss(x)
+        mass, stress = deriv.truss.truss(x)
+        
+        # mass, stress, dm, ds = deriv.finite_diff(x)
         funcs['mass'] = mass
         funcs['stress_arr'] = stress
 
+        if self.method == 'FD':
+            self.eval_hist.append(deriv.truss.func_calls_fd)
+        else:
+            self.eval_hist.append(deriv.truss.func_calls_adj)
         self.mass_hist.append(mass)
-        self.stress_hist.append(stress)
+        self.stress_hist.append(np.mean(stress))
         return funcs, False
 
     def init_problem(self):
@@ -97,6 +108,7 @@ class truss_solver():
         # Design variables
         self.opt_prob.addVarGroup('areas', nVars=10, type='c', value=self.areas, \
                                   lower=0.1, upper=None)
+        
 
         # Constraints
         # yield_compression, yield_tension, area_min
@@ -107,7 +119,6 @@ class truss_solver():
         # Assign the key value for the objective function
         self.opt_prob.addObj('mass')
 
-
         self.optimizer = pyop.SNOPT()
         self.optimizer.setOption('iPrint',0)
         path = '/home/seth/school/optimization/output/'
@@ -115,58 +126,83 @@ class truss_solver():
         self.optimizer.setOption('Summary file', path+f'SNOPT_summary.out')
 
     def solve_problem(self):
-        method = 'FD'
-        sol: Solution = self.optimizer(self.opt_prob, sens='FD')
-        self.m, self.s = truss(self.areas)
-        # while self.iterations < self.iters_limit:
-        while self.iterations < 1:
-            # dm will be vector, ds will be matrix
-            dm, ds = deriv.get_derivatives(method, self.areas, self.m, self.s)
+        if self.method == 'my FD':
+            sens_func = deriv.finite_diff
+        elif self.method == 'adjoint':
+            sens_func = deriv.adjoint
 
-            self.iterations += 1
+        sol: Solution = self.optimizer(self.opt_prob, sens=sens_func)
 
+        np.set_printoptions(precision=8, linewidth=200, floatmode='fixed', suppress=False)
+        print('\n...done!')
+        print(f'\nmethod: {self.method}\n')
 
-        print('...done!')
-
-        print(f'method: {method}')
-        print(f'max of dm/dA: {np.max(dm)}')
-        print(f'max of ds/dA: {np.max(ds)}')
+        # print(f'max of dm/dA: {np.max(dm)}')
+        # print(f'max of ds/dA: {np.max(ds)}')
         print(f'Final mass: {sol.fStar}')
         print(f'Stresses:   {sol.constraints["stress_arr"].value}')
         print(f'Areas:      {sol.xStar["areas"]}')
-        print(f'Number of function calls: {sol.userObjCalls}')
+        print(f'Number of function calls (pyOp count): {sol.userObjCalls}')
+        print(f'Number of function calls (my own count): {self.eval_hist[-1]}')
 
         return sol
 
-    def plot_final_results(self, sol):
-        fig, axes = plt.subplots(nrows=3, ncols=1, sharex=False)
 
-        stress_data = np.array(self.stress_hist)
-        inds = np.array([0,1,2,3,4,5,6,7,9])
-        stress9 = stress_data[:,8]
-        stress_others = stress_data[:,inds]
-        others_labels = ['1','2','3','4','5','6','7','8','10']
-        xdata = np.arange(len(self.mass_hist))
-        # axes[2].set_xticks(self.num_pts)
-        # axes[2].set_xticks(np.arange(0, self.num_pts[-1], 8), minor=True)
+    def run(self):
+        self.init_problem()
+        sol = self.solve_problem()
+        # self.plot_final_results(sol)
+        return sol
 
-        axes[0].plot(xdata, self.mass_hist)
-        axes[0].set_title("Truss Problem Convergence")
-        axes[0].set_ylabel("Mass (lbs)")
-        axes[1].plot(xdata, stress9, label='Bar 9')
-        axes[1].plot(xdata, stress_others)
-        axes[1].set_ylabel("Stress on bar (lbs)")
-        axes[1].legend(loc='upper right')
+def plot_final_results(op1, op2):
+    fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True)
 
-        axes[2].plot(xdata[300:], stress9[300:], label='Bar 9')
-        axes[2].plot(xdata[300:], stress_others[300:])
-        axes[2].set_xlabel('Function calls')
-        axes[2].set_ylabel('Stress on bar (lbs)')
-        axes[2].legend(loc='upper right')
-        plt.show()
+    # finite_diff + adjoint
+    # x-axis: num func calls
+    # y-axis norm of Lagrangian (max constraint?)
+
+    xdata1 = op1.eval_hist
+    xdata2 = op2.eval_hist
+    
+    axes[0].set_title("Truss Problem Convergence")
+    axes[1].set_xlabel("Function calls")
+    axes[0].set_ylabel("Mass (lbs)")
+    axes[0].plot(xdata1, op1.mass_hist, label='FD')
+    axes[0].plot(xdata2, op2.mass_hist, label='adj')
+    axes[1].set_ylabel('Stress on bar (lbs)')
+    axes[1].plot(xdata1, op1.stress_hist, label='FD')
+    axes[1].plot(xdata2, op2.stress_hist, label='adj')
+    axes[1].legend(loc='upper right')
+    plt.ticklabel_format(axis='y', style='sci', scilimits=(0,0))
+    plt.show()
 
 
 if __name__ == '__main__':
-    op = truss_solver()
-    op.run()
-    print('Optimization finished')
+
+    op_fd = truss_solver('my FD')
+    sol_fd = op_fd.run()
+    print('\nOptimization finished\n')
+
+    op_adj = truss_solver('adjoint')
+    sol_adj = op_adj.run()
+    print('\nOptimization finished\n')
+
+    rng = np.random.default_rng()
+    k = 20
+    evals1 = np.zeros(k)
+    evals2 = np.zeros(k)
+    for i in range(k):
+        areas = rng.uniform(0.1,2.0, size=10)
+        op_fd0 = truss_solver('my FD', areas)
+        op_ad0 = truss_solver('adjoint', areas)
+        sol1 = op_fd0.run()
+        sol2 = op_ad0.run()
+
+        evals1[i] = op_fd0.eval_hist[-1]
+        evals2[i] = op_ad0.eval_hist[-1]
+
+    print(f'\nAverge number of function calls required to converge:')
+    print(f'\tFD: {np.mean(evals1)}')
+    print(f'\tadjoint: {np.mean(evals2)}')
+    
+    plot_final_results(op_fd, op_adj)    
