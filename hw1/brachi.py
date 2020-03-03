@@ -22,8 +22,9 @@ sns.set_style('white')
 
 class Brachi:
     def __init__(self):
-        # self.num_pts = np.array([4, 8, 16, 32, 64, 128]) # number of pts including start and end
-        self.num_pts = np.array([32, 64]) # number of pts including start and end
+        self.num_pts = np.array([4, 8, 16, 32, 64, 128]) # number of pts including start and end
+        # self.num_pts = np.array([4, 8, 16, 32, 64]) # number of pts including start and end
+        # self.num_pts = np.array([32, 64]) # number of pts including start and end
         self.marksz = 1.0
 
         # Figure for x, y points
@@ -59,10 +60,10 @@ class Brachi:
 
         # Optimizer
         optimizer = pyop.SNOPT()
-        optimizer.setOption('iPrint',0)
+        # optimizer.setOption('iPrint',0)
         path = '/home/seth/school/optimization/output/'
-        optimizer.setOption('Print file', path+f'SNOPT_print-{n}.out')
-        optimizer.setOption('Summary file', path+f'SNOPT_summary-{n}.out')
+        # optimizer.setOption('Print file', path+f'SNOPT_print-{n}.out')
+        # optimizer.setOption('Summary file', path+f'SNOPT_summary-{n}.out')
 
         return opt_prob, optimizer
 
@@ -74,10 +75,11 @@ class Brachi:
             self.solve_problem(self.opt_prob, self.optimizer)
             self.plot_this_solution(n)
 
-        self.plot_final_results()
+        # self.plot_final_results()
 
     def solve_problem(self, opt_prob: pyop.Optimization, optimizer: pyop.SNOPT):
-        sol: Solution = optimizer(opt_prob, storeHistory=f"output/opt_hist{self.n}.hst")
+        sol: Solution = optimizer(opt_prob, sensMode='pgc', storeHistory=f"output/opt_hist{self.n}.hst")
+        # sol: Solution = optimizer(opt_prob, sensMode=None, storeHistory=f"output/opt_hist{self.n}.hst")
 
         print("...done!")
 
@@ -85,7 +87,7 @@ class Brachi:
         print(f'sol.fStar:  {sol.fStar}')
 
         self.y_arr[1:-1] = sol.xStar['y']
-        # self.time_hist.append(sol.fStar)
+        self.time_hist.append(sol.fStar)
         self.wall_time_hist.append(sol.optTime)
         self.func_evals.append(sol.userObjCalls)
         print("sol.optTime:", sol.optTime)
