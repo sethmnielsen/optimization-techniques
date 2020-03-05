@@ -329,11 +329,13 @@ class OptimizerUncon:
             phi = f
             rhs = phi0 + self.mu1*alpha*(g @ self.p)
             cnt += 1
-        self.g_prev = np.array(self.g)
-        self.g = np.array(g)
-        self.f = f
-        self.x_prev = np.copy(self.x)
-        self.x = xk1
+        
+        if cnt !=0:
+            self.g_prev = np.array(self.g)
+            self.g = np.array(g)
+            self.f = f
+            self.x_prev = np.copy(self.x)
+            self.x = xk1
         return alpha
 
     def bracketed_ls(self):
@@ -431,14 +433,14 @@ if __name__ == '__main__':
     # EXCEPT FOR THIS PART; NING WILL NOT PASS OPTIONS
                 # 'afunc': 'line_search',
     options =  {'pfunc': 'quasi_newton',
-                'afunc': 'line_search',
+                'afunc': 'bracketed_ls',
                 'debug': True,
-                'plot_x_vec': False}
+                'plot_x_vec': True}
 
 
     epsilon_g = 1e-5
-    myfunc = matyas
-    # myfunc = rosenbrock
+    # myfunc = matyas
+    myfunc = rosenbrock
     # myfunc = brachis
 
     if myfunc == brachis:

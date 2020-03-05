@@ -14,6 +14,7 @@ import pyoptsparse as pyop
 from pyoptsparse.pyOpt_solution import Solution
 from pyoptsparse.pyOpt_optimization import Optimization
 from pyoptsparse.pyOpt_optimizer import Optimizer
+from pyoptsparse.pyOpt_history import History
 import seaborn as sns
 sns.set_style('whitegrid')
 
