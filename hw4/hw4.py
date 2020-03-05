@@ -31,8 +31,11 @@ class ConstrainedOptimizer:
         self.n = 100
         self.t = np.linspace(0, 20, 100)
         self.t_exp = self.t**np.arange(6).reshape(6,1) # exponents for trajectory equation
-        self.td_exp = self.t**np.array([0,0,0,0,1,2]).reshape(6,1)
-        self.c = np.array([0, 0, 0, 6, 24, 60]) # Constant multipliers for each jerk term
+        self.tvel_exp = self.t**np.array([0,0,1,2,3,4]) # exponenets for xdot, ydot
+        self.tjerk_exp = self.t**np.array([0,0,0,0,1,2]).reshape(6,1) # exponents for each jerk term
+        
+        self.cvel = np.arange(6) # Constant mulipliers for each velocity term
+        self.cjerk = np.array([0, 0, 0, 6, 24, 60]) # Constant multipliers for each jerk term
         
         xf = 10
         yf = 5
@@ -42,6 +45,8 @@ class ConstrainedOptimizer:
         self.y_arr[0] = 5 
 
         self.L = 2.5 # length of car
+        gam_max = np.pi/4
+        vmax_square = 10**2 # vmax = 10 m/s
 
         # Optimization problem
         self.opt_prob: pyop.Optimization = pyop.Optimization('differential_flat', self.objfunc)
@@ -53,10 +58,21 @@ class ConstrainedOptimizer:
         self.opt_prob.addVarGroup('py', nVars=6, type='c', value=self.py, \
                                   lower=None, upper=None)
 
-        self.opt_prob.addConGroup('stress_arr', nCon=10, lower=-stress_yield, upper=stress_yield)
-        self.opt_prob.addConGroup('stress_arr', nCon=10, lower=-stress_yield, upper=stress_yield)
+        #### CONSTRAINTS ####
+        # start and finish constraints
+        self.opt_prob.addConGroup('initial pos', nCon=2, lower=1e-5, upper=1e-5)
+        self.opt_prob.addConGroup('initial vel', nCon=2, lower=[1e-5,2], upper=[1e-5,2])
+        self.opt_prob.addConGroup('final pos', nCon=2, lower=[xf,yf], upper=[xf,yf])
+        self.opt_prob.addConGroup('final vel', nCon=2, lower=[0,1], upper=[0,1])
+        
+        # constraints over entire trajectory
+        self.opt_prob.addConGroup('vmax', nCon=self.n, lower=0, upper=vmax_square)
+        self.opt_prob.addConGroup('gam_max', nCon=self.n, lower=-gam_max, upper=gam_max)
+        # self.opt_prob.addConGroup('gam_max_plus', nCon=self.n, lower=0, upper=vmax_square)
+        # self.opt_prob.addConGroup('gam_max_minus', nCon=self.n, lower=0, upper=vmax_square)
+        
         # Assign the key value for the objective function
-        self.opt_prob.addObj('obj')
+        self.opt_prob.addObj('obj-min-jerk')
 
         # Optimizer
         optimizer = pyop.SNOPT()
@@ -66,6 +82,23 @@ class ConstrainedOptimizer:
         # optimizer.setOption('Summary file', path+f'SNOPT_summary-{n}.out')
 
         return self.opt_prob, optimizer
+        
+        
+    def trajectory(self, x, d):
+        xd = self.px * self.t_exp
+        yd = self.py * self.t_exp
+        return xd, yd
+    
+    def inequality_constraints(self):
+        vx = xdot / np.cos(thd)
+        vy = ydot / np.sin(thd)
+        
+        v = vx**2
+        thdot = ()
+        
+        
+        
+        return None
 
     def run(self):
         self.opt_prob = None
@@ -93,24 +126,21 @@ class ConstrainedOptimizer:
         # print("Iterations:", sol.)
         print(f"Printing solution:\n", sol)
 
-    def trajectory(self, x, d):
-        xd = self.px * self.t_exp
-        yd = self.py * self.t_exp
-        return xd, yd
-        
 
     def objfunc(self, data):
         funcs = {}
         px = data['px'].reshape(6,1)
         py = data['py'].reshape(6,1)
         
-        pxt = px * self.td_exp
-        pyt = py * self.td_exp
-        x_jerk = np.sum(self.c @ pxt)
-        y_jerk = np.sum(self.c @ pyt)
+        pxtjerk = px * self.tjerk_exp
+        pytjerk = py * self.tjerk_exp
+        x_jerk = np.sum(self.cjerk @ pxtjerk)
+        y_jerk = np.sum(self.cjerk @ pytjerk)
         
         jerk_total = x_jerk**2 + y_jerk**2
 
+        self.inequality_constraints(px, py)
+        
         funcs['obj'] = jerk_total
         fail = False
         return funcs, fail
@@ -124,7 +154,9 @@ class ConstrainedOptimizer:
         self.marksz *= 0.75
         self.ax_pts.plot(self.x_arr, self.y_arr, **props)
 
-    # def plot_final_results(self):
+#region
+    def plot_final_results(self):
+        pass
     #     props = {
     #         'ls': '--',
     #         'color': 'k'
@@ -172,6 +204,7 @@ class ConstrainedOptimizer:
     #     axes[2].set_xlim([self.num_pts[0], self.num_pts[-1]])
 
     #     plt.show()
+#endregion
 
 if __name__ == '__main__':
     op = ConstrainedOptimizer()
