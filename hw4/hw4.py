@@ -12,12 +12,6 @@ sns.set_style('white')
 
 class ConstrainedOptimizer:
     def __init__(self):
-        self.marksz = 1.0
-
-        # Figure for x, y points
-        self.fig_pts = plt.figure()
-        self.ax_pts = self.fig_pts.add_subplot(111)
-
         # Plotting histories
         self.time_hist = []
         self.wall_time_hist = []
@@ -25,16 +19,18 @@ class ConstrainedOptimizer:
         self.num_iterations = []
 
     def init_problem(self):
-        self.px = np.zeros(6) + 1e-5
-        self.py = np.zeros(6) + 1e-5
+        px = np.zeros(6) + 1e-5
+        py = np.zeros(6) + 1e-5
 
         self.n = 100
         self.t = np.linspace(0, 20, 100)
         self.t_exp = self.t**np.arange(6).reshape(6,1) # exponents for trajectory equation
-        self.tvel_exp = self.t**np.array([0,0,1,2,3,4]) # exponenets for xdot, ydot
+        self.tvel_exp = self.t**np.array([0,0,1,2,3,4]).reshape(6,1) # exponents for veloc terms
+        self.tacc_exp = self.t**np.array([0,0,0,1,2,3]).reshape(6,1) # exponents for accel terms
         self.tjerk_exp = self.t**np.array([0,0,0,0,1,2]).reshape(6,1) # exponents for each jerk term
         
         self.cvel = np.arange(6) # Constant mulipliers for each velocity term
+        self.cacc = np.array([0, 0, 2, 6, 12, 20]) # Constant mulipliers for each acceleration term
         self.cjerk = np.array([0, 0, 0, 6, 24, 60]) # Constant multipliers for each jerk term
         
         xf = 10
@@ -52,10 +48,10 @@ class ConstrainedOptimizer:
         self.opt_prob: pyop.Optimization = pyop.Optimization('differential_flat', self.objfunc)
 
         # Design variables
-        self.opt_prob.addVarGroup('px', nVars=6, type='c', value=self.px, \
+        self.opt_prob.addVarGroup('px', nVars=6, type='c', value=px, \
                                   lower=None, upper=None)
 
-        self.opt_prob.addVarGroup('py', nVars=6, type='c', value=self.py, \
+        self.opt_prob.addVarGroup('py', nVars=6, type='c', value=py, \
                                   lower=None, upper=None)
 
         #### CONSTRAINTS ####
@@ -84,21 +80,58 @@ class ConstrainedOptimizer:
         return self.opt_prob, optimizer
         
         
-    def trajectory(self, x, d):
-        xd = self.px * self.t_exp
-        yd = self.py * self.t_exp
-        return xd, yd
+    def trajectory(self, px, py):
+        x = px @ self.t_exp
+        y = py @ self.t_exp
+        return x, y
     
-    def inequality_constraints(self):
-        vx = xdot / np.cos(thd)
-        vy = ydot / np.sin(thd)
+    def velocity(self, px, py):
+        xdot = (self.cvel * px) @ self.tvel_exp
+        ydot = (self.cvel * py) @ self.tvel_exp
+        return xdot, ydot
+    
+    def acceleration(self, px, py):
+        xddot = (self.cacc * px) @ self.tacc_exp
+        yddot = (self.cacc * py) @ self.tacc_exp
+        return xddot, yddot
         
-        v = vx**2
-        thdot = ()
+    def inequality_constraints(self, px, py):
+        xdot, ydot = self.velocity(px,py)
+        xacc, yacc = self.acceleration(px,py)
         
+        th = np.arctan2(ydot, xdot)
+        v = xdot / np.cos(th)
+
+        thdot = yacc*xdot - ydot*xacc
+        gam = np.arctan2(thdot*self.L, v)
         
+        return v, gam, xdot, ydot 
+
+    def objfunc(self, data):
+        funcs = {}
+        px = data['px']
+        py = data['py']
         
-        return None
+        x_jerk = (self.cjerk * px) @ self.tjerk_exp
+        y_jerk = (self.cjerk * py) @ self.tjerk_exp
+        
+        jerk_total = np.sum(x_jerk**2 + y_jerk**2)
+
+        x, y = self.trajectory(px, py)
+        v, gam, xdot, ydot = self.inequality_constraints(px, py)
+        
+        # Bundle up constraints
+        funcs['initial pos'] = [x[0], y[0]]
+        funcs['initial vel'] = [xdot[0], ydot[0]] 
+        funcs['final pos'] = [x[-1], y[-1]]
+        funcs['final vel'] = [xdot[-1], ydot[-1]]
+        
+        funcs['vmax'] = v
+        funcs['gam_max'] = gam
+        
+        funcs['obj-min-jerk'] = jerk_total
+        fail = False
+        return funcs, fail
 
     def run(self):
         self.opt_prob = None
@@ -110,14 +143,17 @@ class ConstrainedOptimizer:
         # self.plot_final_results()
 
     def solve_problem(self, opt_prob: pyop.Optimization, optimizer: pyop.SNOPT):
-        sol: Solution = optimizer(opt_prob, sens='CS', sensMode='pgc', storeHistory=f"output/diff_flat.hst")
+        sol: Solution = optimizer(opt_prob, sens='FD', sensMode='pgc', storeHistory=f"output/diff_flat.hst")
         # sol: Solution = optimizer(opt_prob, sens='CS', sensMode=None, storeHistory=f"output/diff_flat.hst")
+        
+        px = sol.xStar['px']
+        py = sol.xStar['py']
+        x, y = self.trajectory(px, py)
 
         print("...done!")
 
         print(f'sol.fStar:  {sol.fStar}')
 
-        # self.y_arr[1:-1] = sol.xStar['y']
         self.time_hist.append(sol.fStar)
         self.wall_time_hist.append(sol.optTime)
         self.func_evals.append(sol.userObjCalls)
@@ -125,85 +161,25 @@ class ConstrainedOptimizer:
         print("Calls to objective function:", sol.userObjCalls)
         # print("Iterations:", sol.)
         print(f"Printing solution:\n", sol)
-
-
-    def objfunc(self, data):
-        funcs = {}
-        px = data['px'].reshape(6,1)
-        py = data['py'].reshape(6,1)
         
-        pxtjerk = px * self.tjerk_exp
-        pytjerk = py * self.tjerk_exp
-        x_jerk = np.sum(self.cjerk @ pxtjerk)
-        y_jerk = np.sum(self.cjerk @ pytjerk)
-        
-        jerk_total = x_jerk**2 + y_jerk**2
+        self.plot_final_results(x, y)
 
-        self.inequality_constraints(px, py)
-        
-        funcs['obj'] = jerk_total
-        fail = False
-        return funcs, fail
-
-    def plot_this_solution(self, n):
-        props = {
-            'label': n,
-            'marker': 'o',
-            'markersize': 12*self.marksz
-        }
-        self.marksz *= 0.75
-        self.ax_pts.plot(self.x_arr, self.y_arr, **props)
 
 #region
-    def plot_final_results(self):
-        pass
-    #     props = {
-    #         'ls': '--',
-    #         'color': 'k'
-    #     }
-    #     self.ax_pts.plot([0,1], [1,0], **props)
-    #     self.ax_pts.set_title('Brachistochrone Optimization Problem')
-    #     self.ax_pts.set_xlabel('x')
-    #     self.ax_pts.set_ylabel('y')
-    #     self.ax_pts.legend(title='No. Points')
-    #     self.ax_pts.xaxis.set_major_locator(MultipleLocator(0.2))
-    #     self.ax_pts.xaxis.set_minor_locator(AutoMinorLocator(5))
-    #     self.ax_pts.yaxis.set_major_locator(MultipleLocator(0.2))
-    #     self.ax_pts.yaxis.set_minor_locator(AutoMinorLocator(5))
-    #     self.ax_pts.grid(which='major')
-    #     self.ax_pts.grid(which='minor', alpha=0.2)
+    def plot_final_results(self, x, y):
+        props = {
+            'ls': '--',
+            'color': 'k'
+        }
+        fig, ax = plt.subplots(nrows=1, ncols=1, sharex=True)
 
-    #     fig, axes = plt.subplots(nrows=3, ncols=1, sharex=True)
-    #     plt.gcf().subplots_adjust(left=0.15)
-
-    #     axes[2].set_xlabel('number of points')
-    #     axes[2].set_xticks(self.num_pts)
-    #     axes[2].set_xticks(np.arange(0, self.num_pts[-1], 8), minor=True)
-
-    #     axes[0].plot(self.num_pts, self.time_hist, color='blue')
-    #     axes[0].set_title("Dimensionality")
-    #     axes[0].set_ylabel("travel time (s)")
-    #     axes[0].yaxis.set_major_locator(MultipleLocator(0.005))
-    #     # axes[0].yaxis.set_minor_locator(AutoMinorLocator(5))
-    #     axes[0].grid(which='major')
-    #     axes[0].grid(which='minor', alpha=0.2)
-    #     axes[0].set_ylim([0.62, 0.66])
-
-    #     axes[1].plot(self.num_pts, self.wall_time_hist, color='orange')
-    #     axes[1].set_ylabel("wall time (s)\n")
-    #     axes[1].yaxis.set_major_locator(MultipleLocator(20))
-    #     # axes[1].yaxis.set_minor_locator(AutoMinorLocator(5))
-    #     axes[1].grid(which='major')
-    #     axes[1].grid(which='minor', alpha=0.2)
-    #     axes[1].set_ylim([0, None])
-
-    #     axes[2].plot(self.num_pts, self.func_evals, color='green')
-    #     axes[2].set_ylabel("function evaluations")
-    #     axes[2].grid(which='major')
-    #     axes[2].grid(which='minor', alpha=0.2)
-    #     axes[2].set_xlim([self.num_pts[0], self.num_pts[-1]])
-
-    #     plt.show()
+        ax.set_title(r"$x_d$ vs $y_d$")
+        ax.plot(x, y, linewidth=2, color='r')
+        
+        ax.set_xlabel(r"$x_d$")
+        ax.set_ylabel(r"$y_d$")
+        # plt.ticklabel_format(axis='y', style='sci', scilimits=(0,0))
+        plt.show()
 #endregion
 
 if __name__ == '__main__':

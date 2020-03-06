@@ -23,8 +23,9 @@
 \begin{document}
 
 \title{Constrained Optimization}
-\author{Brendon Forsgren}
+\author{Seth Nielsen}
 % put in \date{} if you don't want a date to appear, or enter a specific date, otherwise default is today's date.
+\date{}
 \maketitle
 
 \section{Introduction}
@@ -51,7 +52,7 @@ A nonlinear system is defined by \cref{eq:xdot} and \cref{eq:y}
   \label{eq:y}
 \end{equation}
 where $x \epsilon \mathbb{R}^n$ is the system state, $u \epsilon \mathbb{R}^m$ the inputs, $\dot{x}$ the time derivative of the state,
-and $y \epsilon \mathbb{R}^p$ the system outputs. The system is differentially flat is there 
+and $y \epsilon \mathbb{R}^p$ the system outputs. The system is differentially flat if there 
 are $m$ output functions (called flat outputs) such that all of the states and inputs can be 
 expressed in terms of the flat outputs and their derivatives.
 
@@ -171,8 +172,16 @@ the starting and ending point. The constraints used in our problem can be seen i
   \label{eq:constraints}
 \end{equation}
 
-Using these constraints and the cost function defined in \cref{eq:simple_cost} we can find a 
-minimum jerk trajectory for our vehicle between two points.
+Using these constraints and the cost function defined in \cref{eq:simple_cost} we can find a minimum jerk trajectory for our vehicle between two points.
+
+\subsection{Results}
+The resulting trajectory from the optimization can be seen below in \cref{fig:plot}. The optimizer used to obtain these results was the SNOPT optimizer through the pyOptSparse framework.
+
+\begin{figure}[bth]
+  \centering
+  \includegraphics[scale=0.5]{plot.png}
+  \caption{Optimized trajectory.\label{fig:plot}}
+\end{figure}
 
 \end{document}
 

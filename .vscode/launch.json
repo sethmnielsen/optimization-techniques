@@ -56,11 +56,21 @@
             "redirectOutput": true
         },
         {
+            "name": "hw4",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/hw4/hw4.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "redirectOutput": true
+        },
+        {
             "name": "Python: Current File (Integrated Terminal)",
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "justMyCode": false
         },
     ]
 }

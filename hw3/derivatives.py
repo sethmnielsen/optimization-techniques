@@ -5,7 +5,7 @@ import truss
 
 def get_derivatives(method, A:ndarray):
     if method == 'FD':
-        m, s, dm, ds = finite_diff(A)
+        m, s, dm, ds = finite_diff_normal(A)
     elif method == 'complex':
         m, s, dm, ds = complex_step(A)
     elif method == 'AD':
@@ -40,6 +40,24 @@ def finite_diff(A_dict:dict, data:dict, h=1e-8):
 
     # return m, s, dm, ds
     return funcs, False
+
+def finite_diff_normal(A, h=1e-8):
+    m, s = truss.truss(A)
+    
+    n = len(A)
+    dm = np.zeros(n)
+    ds = np.zeros((n, n))
+    for j in range(n):
+        e = np.zeros(n)
+        e[j] = h
+        mj, sj = truss.truss(A+e)
+        # forward differencing
+        dm[j] = (mj - m)/h
+        ds[:,j] = (sj - s)/h
+    
+    # return m, s, dm, ds
+    return m, s, dm, ds
+
 
 def complex_step(A:ndarray, h=1e-40):
     m, s = truss.truss(A)
