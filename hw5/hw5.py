@@ -22,8 +22,8 @@ class ConstrainedOptimizer:
         px = np.zeros(6) + 1e-4
         py = np.zeros(6) + 1e-4
 
-        self.n = 400
-        self.t = np.linspace(0, 15, 100)
+        self.n = 100
+        self.t = np.linspace(0, 15, self.n)
         self.t_exp = self.t**np.arange(6).reshape(6,1) # exponents for trajectory equation
         self.tvel_exp = self.t**np.array([0,0,1,2,3,4]).reshape(6,1) # exponents for veloc terms
         self.tacc_exp = self.t**np.array([0,0,0,1,2,3]).reshape(6,1) # exponents for accel terms
@@ -33,12 +33,10 @@ class ConstrainedOptimizer:
         self.cacc = np.array([0, 0, 2, 6, 12, 20]) # Constant mulipliers for each acceleration term
         self.cjerk = np.array([0, 0, 0, 6, 24, 60]) # Constant multipliers for each jerk term
         
-        xf = 10
-        yf = 5
+        x0, y0, xf, yf = [0., 0., 10., 0.]
+        vx0, vy0, vxf, vyf = [0., 2., 0., 1.]
         self.x_arr = np.zeros(self.n) + 1e-5
         self.y_arr = np.zeros(self.n) + 1e-5
-        self.x_arr[0] = 10
-        self.y_arr[0] = 5 
 
         self.L = 1.5 # length of car
         gam_max = np.pi/4
@@ -56,10 +54,10 @@ class ConstrainedOptimizer:
 
         #### CONSTRAINTS ####
         # start and finish constraints
-        self.opt_prob.addConGroup('initial pos', nCon=2, lower=1e-5, upper=1e-5)
-        self.opt_prob.addConGroup('initial vel', nCon=2, lower=[1e-5,2], upper=[1e-5,2])
+        self.opt_prob.addConGroup('initial pos', nCon=2, lower=[x0,y0], upper=[x0,y0])
+        self.opt_prob.addConGroup('initial vel', nCon=2, lower=[vx0,vy0], upper=[vx0,vy0])
         self.opt_prob.addConGroup('final pos', nCon=2, lower=[xf,yf], upper=[xf,yf])
-        self.opt_prob.addConGroup('final vel', nCon=2, lower=[0,1], upper=[0,1])
+        self.opt_prob.addConGroup('final vel', nCon=2, lower=[vxf,vyf], upper=[vxf,vyf])
         
         # constraints over entire trajectory
         self.opt_prob.addConGroup('vmax', nCon=self.n, lower=0, upper=vmax_square)
@@ -103,8 +101,8 @@ class ConstrainedOptimizer:
         a = np.sqrt(xacc**2 + yacc**2)
         arg1 = v/1 + np.tan(np.pi/4)
         arg2 = (xdot*yacc - ydot*xacc) / v**3
-        gmax = arg1 - arg2
-        gmax2 = arg1 + arg2
+        gam_max = arg1 - arg2
+        gam_max2 = arg1 + arg2
         
         # th = np.arctan2(ydot, xdot)
         # v = xdot / np.cos(th)
@@ -112,7 +110,7 @@ class ConstrainedOptimizer:
         # thdot = yacc*xdot - ydot*xacc
         # gam = np.arctan2(thdot*self.L, v)
         
-        return v, gam, xdot, ydot 
+        return v, gam_max, xdot, ydot 
 
     def objfunc(self, data):
         funcs = {}
