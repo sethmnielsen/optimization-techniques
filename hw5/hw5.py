@@ -6,6 +6,9 @@ from pyoptsparse.pyOpt_optimizer import Optimizer
 from pyoptsparse.pyOpt_history import History
 import matplotlib.pyplot as plt
 from matplotlib.ticker import (AutoMinorLocator, MultipleLocator)
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
+from typing import List
 
 import seaborn as sns
 sns.set_style('white')
@@ -24,7 +27,7 @@ class ConstrainedOptimizer:
 
         self.n = 100
         self.t = np.linspace(0, 15, self.n)
-        self.t_exp = self.t**np.arange(6).reshape(6,1) # exponents for trajectory equation
+        self.tpos_exp = self.t**np.arange(6).reshape(6,1) # exponents for trajectory equation
         self.tvel_exp = self.t**np.array([0,0,1,2,3,4]).reshape(6,1) # exponents for veloc terms
         self.tacc_exp = self.t**np.array([0,0,0,1,2,3]).reshape(6,1) # exponents for accel terms
         self.tjerk_exp = self.t**np.array([0,0,0,0,1,2]).reshape(6,1) # exponents for each jerk term
@@ -35,12 +38,11 @@ class ConstrainedOptimizer:
         
         x0, y0, xf, yf = [0., 0., 10., 0.]
         vx0, vy0, vxf, vyf = [0., 2., 0., 1.]
-        self.x_arr = np.zeros(self.n) + 1e-5
-        self.y_arr = np.zeros(self.n) + 1e-5
 
         self.L = 1.5 # length of car
         gam_max = np.pi/4
-        vmax_square = 10**2 # vmax = 10 m/s
+        self.vmax_square = 10**2 # vmax = 10 m/s
+        self.amax_square = 2**2  # amax = 2 m/s**2
 
         # Optimization problem
         self.opt_prob: pyop.Optimization = pyop.Optimization('differential_flat', self.objfunc)
@@ -60,10 +62,11 @@ class ConstrainedOptimizer:
         self.opt_prob.addConGroup('final vel', nCon=2, lower=[vxf,vyf], upper=[vxf,vyf])
         
         # constraints over entire trajectory
-        self.opt_prob.addConGroup('vmax', nCon=self.n, lower=0, upper=vmax_square)
-        self.opt_prob.addConGroup('gam_max', nCon=self.n, lower=-gam_max, upper=gam_max)
-        # self.opt_prob.addConGroup('gam_max_plus', nCon=self.n, lower=0, upper=vmax_square)
-        # self.opt_prob.addConGroup('gam_max_minus', nCon=self.n, lower=0, upper=vmax_square)
+        self.opt_prob.addConGroup('v', nCon=self.n, lower=0, upper=self.vmax_square)
+        self.opt_prob.addConGroup('a', nCon=self.n, lower=0, upper=self.amax_square)
+        # self.opt_prob.addConGroup('gam_max', nCon=self.n, lower=-gam_max, upper=gam_max)
+        self.opt_prob.addConGroup('gam_plus', nCon=self.n, lower=0, upper=gam_max)
+        self.opt_prob.addConGroup('gam_minus', nCon=self.n, lower=0, upper=-gam_max)
         
         # Assign the key value for the objective function
         self.opt_prob.addObj('obj-min-jerk')
@@ -77,15 +80,14 @@ class ConstrainedOptimizer:
 
         return self.opt_prob, optimizer
         
-        
-    def trajectory(self, px, py):
-        x = px @ self.t_exp
-        y = py @ self.t_exp
+    def position(self, px, py, idx=...):
+        x = px @ self.tpos_exp[:,idx]
+        y = py @ self.tpos_exp[:,idx]
         return x, y
     
-    def velocity(self, px, py):
-        xdot = (self.cvel * px) @ self.tvel_exp
-        ydot = (self.cvel * py) @ self.tvel_exp
+    def velocity(self, px, py, idx=...):
+        xdot = (self.cvel * px) @ self.tvel_exp[:,idx]
+        ydot = (self.cvel * py) @ self.tvel_exp[:,idx]
         return xdot, ydot
     
     def acceleration(self, px, py):
@@ -93,24 +95,43 @@ class ConstrainedOptimizer:
         yddot = (self.cacc * py) @ self.tacc_exp
         return xddot, yddot
         
-    def inequality_constraints(self, px, py):
-        xdot, ydot = self.velocity(px,py)
-        xacc, yacc = self.acceleration(px,py)
+    def equality_constraints(self, funcs, px, py, vx, vy):
+        x0, y0 = self.position(px, py, 0)
+        xf, yf = self.position(px, py, -1)
         
-        v = np.sqrt(xdot**2 + ydot**2)
-        a = np.sqrt(xacc**2 + yacc**2)
-        arg1 = v/1 + np.tan(np.pi/4)
-        arg2 = (xdot*yacc - ydot*xacc) / v**3
-        gam_max = arg1 - arg2
-        gam_max2 = arg1 + arg2
+        # Bundle up constraints
+        funcs['initial pos'] = [x0, y0]
+        funcs['initial vel'] = [vx[0], vy[0]] 
+        funcs['final pos'] = [xf, yf]
+        funcs['final vel'] = [vx[-1], vy[-1]]
         
-        # th = np.arctan2(ydot, xdot)
-        # v = xdot / np.cos(th)
+        return funcs
+        
+    def inequality_constraints(self, funcs, px, py):
+        vx, vy = self.velocity(px,py)
+        ax, ay = self.acceleration(px,py)
+        
+        funcs = self.equality_constraints(funcs, px, py, vx, vy)
+        
+        v = np.sqrt(vx**2 + vy**2)
+        a = np.sqrt(ax**2 + ay**2)
+        gam_limit = v/self.L * np.tan(np.pi/4)
+        current_gam = (vx*ay - vy*ax) / v**3
+        gam_minus = gam_limit - current_gam
+        gam_plus = gam_limit + current_gam
+        
+        funcs['v'] = v
+        funcs['a'] = a
+        funcs['gam_plus'] = gam_plus 
+        funcs['gam_minus'] = gam_minus
+        
+        # th = np.arctan2(vy, vx)
+        # v = vx / np.cos(th)
 
-        # thdot = yacc*xdot - ydot*xacc
+        # thdot = ay*vx - vy*ax
         # gam = np.arctan2(thdot*self.L, v)
         
-        return v, gam_max, xdot, ydot 
+        return funcs
 
     def objfunc(self, data):
         funcs = {}
@@ -122,17 +143,7 @@ class ConstrainedOptimizer:
         
         jerk_total = np.sum(x_jerk**2 + y_jerk**2)
 
-        x, y = self.trajectory(px, py)
-        v, gam, xdot, ydot = self.inequality_constraints(px, py)
-        
-        # Bundle up constraints
-        funcs['initial pos'] = [x[0], y[0]]
-        funcs['initial vel'] = [xdot[0], ydot[0]] 
-        funcs['final pos'] = [x[-1], y[-1]]
-        funcs['final vel'] = [xdot[-1], ydot[-1]]
-        
-        funcs['vmax'] = v
-        funcs['gam_max'] = gam
+        funcs = self.inequality_constraints(px, py, funcs)
         
         funcs['obj-min-jerk'] = jerk_total
         fail = False
@@ -153,7 +164,12 @@ class ConstrainedOptimizer:
         
         px = sol.xStar['px']
         py = sol.xStar['py']
-        x, y = self.trajectory(px, py)
+        x, y = self.position(px, py)
+        vx, vy = self.velocity(px, py)
+        ax, ay = self.acceleration(px, py)
+        v = np.sqrt(vx**2 + vy**2)
+        theta = np.rad2deg(np.arctan2(vy, vx))
+        gamma = np.rad2deg(np.arctan2(self.L * (vx * ay - vy * ax), v**3)) 
 
         print("...done!")
 
@@ -169,24 +185,50 @@ class ConstrainedOptimizer:
         # print("Iterations:", sol.)
         # print(f"Printing solution:\n", sol)
         
-        self.plot_final_results(x, y)
+        self.plot_final_results(x, y, v, theta, gamma)
 
 
 #region
-    def plot_final_results(self, x, y):
+    def plot_final_results(self, x, y, v, theta, gamma):
         props = {
             'ls': '--',
             'color': 'k'
         }
-        fig, ax = plt.subplots(nrows=1, ncols=1, sharex=True)
-
-        ax.set_title(r"$x_d$ vs $y_d$")
-        ax.plot(x, y, linewidth=2, color='r')
         
-        ax.set_xlabel(r"$x_d$")
-        ax.set_ylabel(r"$y_d$")
-        # plt.ticklabel_format(axis='y', style='sci', scilimits=(0,0))
+        fig, ax = plt.subplots(nrows=1, ncols=1, sharex=False, squeeze=False)
+        fig: Figure
+        ax: List[Axes]
+        ax = ax[0]
+        ax[0].set_title("Trajectory")
+        ax[0].plot(x, y, linewidth=2, color='r')
+        ax[0].set_xlabel(r"$x_d$")
+        ax[0].set_ylabel(r"$y_d$")
+        
+        fig2, ax2 = plt.subplots(nrows=3, ncols=1, sharex=True)
+        fig2: Figure
+        ax2: List[Axes]
+        ax2[0].set_title("States over time")
+        ax2[2].set_xlabel(r"$t$")
+        ax2[0].plot(self.t, x, linewidth=2, color='r')
+        ax2[1].plot(self.t, y, linewidth=2, color='r')
+        ax2[2].plot(self.t, theta, linewidth=2, color='r')
+        ax2[0].set_ylabel(r"$x_d$")
+        ax2[1].set_ylabel(r"$y_d$")
+        ax2[2].set_ylabel(r"$\theta_d$")
+        
+        
+        fig2, ax2 = plt.subplots(nrows=2, ncols=1, sharex=True)
+        fig2: Figure
+        ax2: List[Axes]
+        ax2[0].set_title("Inputs over time")
+        ax2[1].set_xlabel(r"$t$")
+        ax2[0].plot(self.t, v, linewidth=2, color='r')
+        ax2[1].plot(self.t, gamma, linewidth=2, color='r')
+        ax2[0].set_ylabel(r"$v$")
+        ax2[1].set_ylabel(r"$\gamma$")
+        
         plt.show()
+        
 #endregion
 
 if __name__ == '__main__':

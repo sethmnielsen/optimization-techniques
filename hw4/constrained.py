@@ -3,6 +3,8 @@ import pyoptsparse
 import matplotlib.pyplot as plt
 import sys
 
+np.set_printoptions(precision=4, suppress=True, sign=' ', linewidth=100)
+
 #Consider reformatting with my derivatives
 l = 1.5
 t0 = 0.0
@@ -115,6 +117,11 @@ def objective(x_dict):
     t_span = np.linspace(t0, tf, 100)
     funcs = {}
 
+    x, y = position(t_span, p)
+    # px = p[:6]
+    # py = p[6:]
+    # print(f'{x=}\n{y=}\n\n')
+
     #Implement integration of cost function here
     Jx, Jy = jerk(t_span, p)
     vdd = Jx**2 + Jy**2
@@ -128,7 +135,10 @@ def objective(x_dict):
     
     return funcs, False
 
-if __name__=="__main__": 
+if __name__=="__main__":
+    
+    '''----------- Setting up the problem -----------''' 
+    
     p = np.ones(12) * 1e-4
 
     optProb = pyoptsparse.Optimization('Differential_Flatness', objective)
@@ -143,12 +153,20 @@ if __name__=="__main__":
 
     opt = pyoptsparse.SNOPT()
     sol = opt(optProb, sens='CS', storeHistory='constrained.txt') 
+    
+    
+    
+    '''----------- Displaying the results -----------''' 
+    
+    #region
+    path = '/home/seth/school/optimization/hw4/b_figs/'
+    
     print(sol.xStar['xvars'])
     print('Optimum Value: ', sol.fStar.item(0))
     print(f'userObjCalls: {sol.userObjCalls}') 
 
     # hist = pyoptsparse.History('constrained.txt', flag='r') #Has the history info
-    data = np.loadtxt('SNOPT.dat', skiprows=3) #had to edit SNOPT.dat to work
+    data = np.loadtxt(path+'SNOPT.dat', skiprows=3) #had to edit SNOPT.dat to work
     opt = data[:,2]
     feas = data[:,3]
     idx = np.arange(0, opt.size)
@@ -169,12 +187,19 @@ if __name__=="__main__":
     print('Max v: {}'.format(np.max(v)))
     print('Max a: {}'.format(np.max(ax**2 + ay**2)))
     print('Max gamma: {}, Min gamma: {}'.format(np.max(gamma), np.min(gamma)))
+    #endregion
+    
+    
+    
+    '''----------- Plotting -----------''' 
+    
+    #region
 
     plt.figure(1)
     plt.plot(x, y)
     plt.title('Trajectory')
     plt.axis('equal')
-    plt.savefig('trajectory.pdf', format='pdf', bbox_inches='tight', pad_inches=0.1)
+    plt.savefig(path+'trajectory.pdf', format='pdf', bbox_inches='tight', pad_inches=0.1)
 
     fig2, ax = plt.subplots(3,1, sharex=True)
     ax[0].set_title('States')
@@ -185,7 +210,7 @@ if __name__=="__main__":
     ax[2].plot(t_vec, theta)
     ax[2].set_ylabel(r'$\theta$ (rad)')
     ax[2].set_xlabel('Time (s)')
-    plt.savefig('states.pdf', format='pdf', bbox_inches='tight', pad_inches=0.1)
+    plt.savefig(path+'states.pdf', format='pdf', bbox_inches='tight', pad_inches=0.1)
 
     fig3, ax3 = plt.subplots(2,1, sharex=True)
     ax3[0].set_title('Inputs')
@@ -194,7 +219,7 @@ if __name__=="__main__":
     ax3[1].plot(t_vec, gamma)
     ax3[1].set_ylabel('$\gamma$ (rad)')
     ax3[1].set_xlabel('Time (s)')
-    plt.savefig('inputs.pdf', format='pdf', bbox_inches='tight', pad_inches=0.1)
+    plt.savefig(path+'inputs.pdf', format='pdf', bbox_inches='tight', pad_inches=0.1)
 
     fig4, ax4 = plt.subplots(2,1, sharex=True)
     ax4[0].plot(idx, opt)
@@ -202,5 +227,6 @@ if __name__=="__main__":
     ax4[0].set_ylabel('Optimality')
     ax4[1].plot(idx, feas)
     ax4[1].set_ylabel('Feasibility')
-    plt.savefig('optimality.pdf', format='pdf', bbox_inches='tight', pad_inches=0.1)
+    plt.savefig(path+'optimality.pdf', format='pdf', bbox_inches='tight', pad_inches=0.1)
     plt.show()
+    #endregion
