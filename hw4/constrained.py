@@ -1,6 +1,7 @@
 import numpy as np 
 import pyoptsparse
 import matplotlib.pyplot as plt
+import sys
 
 #Consider reformatting with my derivatives
 l = 1.5
@@ -144,6 +145,7 @@ if __name__=="__main__":
     sol = opt(optProb, sens='CS', storeHistory='constrained.txt') 
     print(sol.xStar['xvars'])
     print('Optimum Value: ', sol.fStar.item(0))
+    print(f'userObjCalls: {sol.userObjCalls}') 
 
     # hist = pyoptsparse.History('constrained.txt', flag='r') #Has the history info
     data = np.loadtxt('SNOPT.dat', skiprows=3) #had to edit SNOPT.dat to work

@@ -19,11 +19,11 @@ class ConstrainedOptimizer:
         self.num_iterations = []
 
     def init_problem(self):
-        px = np.zeros(6) + 1e-5
-        py = np.zeros(6) + 1e-5
+        px = np.zeros(6) + 1e-4
+        py = np.zeros(6) + 1e-4
 
-        self.n = 100
-        self.t = np.linspace(0, 20, 100)
+        self.n = 400
+        self.t = np.linspace(0, 15, 100)
         self.t_exp = self.t**np.arange(6).reshape(6,1) # exponents for trajectory equation
         self.tvel_exp = self.t**np.array([0,0,1,2,3,4]).reshape(6,1) # exponents for veloc terms
         self.tacc_exp = self.t**np.array([0,0,0,1,2,3]).reshape(6,1) # exponents for accel terms
@@ -40,7 +40,7 @@ class ConstrainedOptimizer:
         self.x_arr[0] = 10
         self.y_arr[0] = 5 
 
-        self.L = 2.5 # length of car
+        self.L = 1.5 # length of car
         gam_max = np.pi/4
         vmax_square = 10**2 # vmax = 10 m/s
 
@@ -99,11 +99,18 @@ class ConstrainedOptimizer:
         xdot, ydot = self.velocity(px,py)
         xacc, yacc = self.acceleration(px,py)
         
-        th = np.arctan2(ydot, xdot)
-        v = xdot / np.cos(th)
+        v = np.sqrt(xdot**2 + ydot**2)
+        a = np.sqrt(xacc**2 + yacc**2)
+        arg1 = v/1 + np.tan(np.pi/4)
+        arg2 = (xdot*yacc - ydot*xacc) / v**3
+        gmax = arg1 - arg2
+        gmax2 = arg1 + arg2
+        
+        # th = np.arctan2(ydot, xdot)
+        # v = xdot / np.cos(th)
 
-        thdot = yacc*xdot - ydot*xacc
-        gam = np.arctan2(thdot*self.L, v)
+        # thdot = yacc*xdot - ydot*xacc
+        # gam = np.arctan2(thdot*self.L, v)
         
         return v, gam, xdot, ydot 
 
@@ -143,7 +150,7 @@ class ConstrainedOptimizer:
         # self.plot_final_results()
 
     def solve_problem(self, opt_prob: pyop.Optimization, optimizer: pyop.SNOPT):
-        sol: Solution = optimizer(opt_prob, sens='FD', sensMode='pgc', storeHistory=f"output/diff_flat.hst")
+        sol: Solution = optimizer(opt_prob, sens='CS', sensMode='pgc', storeHistory=f"output/diff_flat.hst")
         # sol: Solution = optimizer(opt_prob, sens='CS', sensMode=None, storeHistory=f"output/diff_flat.hst")
         
         px = sol.xStar['px']
@@ -153,6 +160,8 @@ class ConstrainedOptimizer:
         print("...done!")
 
         print(f'sol.fStar:  {sol.fStar}')
+        print(f'sol.xStar[\'px\']: {px}')
+        print(f'sol.xStar[\'py\']: {py}')
 
         self.time_hist.append(sol.fStar)
         self.wall_time_hist.append(sol.optTime)
@@ -160,7 +169,7 @@ class ConstrainedOptimizer:
         print("sol.optTime:", sol.optTime)
         print("Calls to objective function:", sol.userObjCalls)
         # print("Iterations:", sol.)
-        print(f"Printing solution:\n", sol)
+        # print(f"Printing solution:\n", sol)
         
         self.plot_final_results(x, y)
 
