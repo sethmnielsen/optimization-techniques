@@ -148,8 +148,8 @@ class ConstrainedOptimizer:
         # self.plot_final_results()
 
     def solve_problem(self, opt_prob: pyop.Optimization, optimizer: pyop.SNOPT):
-        sol: Solution = optimizer(opt_prob, sens='CS', sensMode='pgc', storeHistory=f"output/diff_flat.hst")
-        # sol: Solution = optimizer(opt_prob, sens='CS', sensMode=None, storeHistory=f"output/diff_flat.hst")
+        # sol: Solution = optimizer(opt_prob, sens='CS', sensMode='pgc', storeHistory=f"output/diff_flat.hst")
+        sol: Solution = optimizer(opt_prob, sens='CS', sensMode=None, storeHistory=f"output/diff_flat.hst")
         
         px = sol.xStar['px']
         py = sol.xStar['py']
