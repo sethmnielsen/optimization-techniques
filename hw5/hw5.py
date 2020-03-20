@@ -1,4 +1,5 @@
 import numpy as np
+from numpy import ndarray
 import pyoptsparse as pyop
 from pyoptsparse.pyOpt_solution import Solution
 from pyoptsparse.pyOpt_optimization import Optimization
@@ -8,7 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import (AutoMinorLocator, MultipleLocator)
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from typing import List
+from typing import List, Dict, Any
 
 import seaborn as sns
 sns.set_style('white')
@@ -36,6 +37,14 @@ class ConstrainedOptimizer:
         self.cacc = np.array([0, 0, 2, 6, 12, 20]) # Constant mulipliers for each acceleration term
         self.cjerk = np.array([0, 0, 0, 6, 24, 60]) # Constant multipliers for each jerk term
         
+
+        # Optimization problem
+        opt_prob: pyop.Optimization = pyop.Optimization('differential_flat', self.objfunc)
+
+        # Design variables
+        opt_prob.addVarGroup('px', nVars=6, type='c', value=px, lower=None, upper=None)
+        opt_prob.addVarGroup('py', nVars=6, type='c', value=py, lower=None, upper=None)
+
         x0, y0, xf, yf = [0., 0., 10., 0.]
         vx0, vy0, vxf, vyf = [0., 2., 0., 1.]
 
@@ -44,58 +53,49 @@ class ConstrainedOptimizer:
         self.vmax_square = 10**2 # vmax = 10 m/s
         self.amax_square = 2**2  # amax = 2 m/s**2
 
-        # Optimization problem
-        self.opt_prob: pyop.Optimization = pyop.Optimization('differential_flat', self.objfunc)
-
-        # Design variables
-        self.opt_prob.addVarGroup('px', nVars=6, type='c', value=px, \
-                                  lower=None, upper=None)
-
-        self.opt_prob.addVarGroup('py', nVars=6, type='c', value=py, \
-                                  lower=None, upper=None)
-
         #### CONSTRAINTS ####
         # start and finish constraints
-        self.opt_prob.addConGroup('initial pos', nCon=2, lower=[x0,y0], upper=[x0,y0])
-        self.opt_prob.addConGroup('initial vel', nCon=2, lower=[vx0,vy0], upper=[vx0,vy0])
-        self.opt_prob.addConGroup('final pos', nCon=2, lower=[xf,yf], upper=[xf,yf])
-        self.opt_prob.addConGroup('final vel', nCon=2, lower=[vxf,vyf], upper=[vxf,vyf])
+        opt_prob.addConGroup('initial pos', nCon=2, lower=[x0,y0], upper=[x0,y0])
+        opt_prob.addConGroup('initial vel', nCon=2, lower=[vx0,vy0], upper=[vx0,vy0])
+        opt_prob.addConGroup('final pos', nCon=2, lower=[xf,yf], upper=[xf,yf])
+        opt_prob.addConGroup('final vel', nCon=2, lower=[vxf,vyf], upper=[vxf,vyf])
         
         # constraints over entire trajectory
-        self.opt_prob.addConGroup('v', nCon=self.n, lower=0, upper=self.vmax_square)
-        self.opt_prob.addConGroup('a', nCon=self.n, lower=0, upper=self.amax_square)
-        # self.opt_prob.addConGroup('gam_max', nCon=self.n, lower=-gam_max, upper=gam_max)
-        self.opt_prob.addConGroup('gam_plus', nCon=self.n, lower=0, upper=gam_max)
-        self.opt_prob.addConGroup('gam_minus', nCon=self.n, lower=0, upper=-gam_max)
+        opt_prob.addConGroup('v', nCon=self.n, lower=0, upper=self.vmax_square)
+        opt_prob.addConGroup('a', nCon=self.n, lower=0, upper=self.amax_square)
+        opt_prob.addConGroup('gam_max', nCon=self.n, lower=-gam_max, upper=gam_max)
+        # opt_prob.addConGroup('gam_plus', nCon=self.n, lower=0, upper=gam_max)
+        # opt_prob.addConGroup('gam_minus', nCon=self.n, lower=0, upper=-gam_max)
         
         # Assign the key value for the objective function
-        self.opt_prob.addObj('obj-min-jerk')
+        opt_prob.addObj('obj-min-jerk')
 
         # Optimizer
         optimizer = pyop.SNOPT()
-        # optimizer.setOption('iPrint',0)
+        optimizer.setOption('iPrint',0)
+        optimizer.setOption('iSumm', 0)
         # path = '/home/seth/school/optimization/output/'
         # optimizer.setOption('Print file', path+f'SNOPT_print-{n}.out')
         # optimizer.setOption('Summary file', path+f'SNOPT_summary-{n}.out')
 
-        return self.opt_prob, optimizer
+        return opt_prob, optimizer
         
-    def position(self, px, py, idx=...):
+    def position(self, px:ndarray, py:ndarray, idx=...):
         x = px @ self.tpos_exp[:,idx]
         y = py @ self.tpos_exp[:,idx]
         return x, y
     
-    def velocity(self, px, py, idx=...):
+    def velocity(self, px:ndarray, py:ndarray, idx:Any=...):
         xdot = (self.cvel * px) @ self.tvel_exp[:,idx]
         ydot = (self.cvel * py) @ self.tvel_exp[:,idx]
         return xdot, ydot
     
-    def acceleration(self, px, py):
+    def acceleration(self, px:ndarray, py:ndarray):
         xddot = (self.cacc * px) @ self.tacc_exp
         yddot = (self.cacc * py) @ self.tacc_exp
         return xddot, yddot
         
-    def equality_constraints(self, funcs, px, py, vx, vy):
+    def equality_constraints(self, funcs:Dict, px:ndarray, py:ndarray, vx, vy):
         x0, y0 = self.position(px, py, 0)
         xf, yf = self.position(px, py, -1)
         
@@ -107,7 +107,7 @@ class ConstrainedOptimizer:
         
         return funcs
         
-    def inequality_constraints(self, funcs, px, py):
+    def inequality_constraints(self, funcs:Dict, px:ndarray, py:ndarray) -> Dict:
         vx, vy = self.velocity(px,py)
         ax, ay = self.acceleration(px,py)
         
@@ -122,8 +122,9 @@ class ConstrainedOptimizer:
         
         funcs['v'] = v
         funcs['a'] = a
-        funcs['gam_plus'] = gam_plus 
-        funcs['gam_minus'] = gam_minus
+        # funcs['gam_plus'] = gam_plus 
+        # funcs['gam_minus'] = gam_minus
+        funcs['gam_max'] = current_gam
         
         # th = np.arctan2(vy, vx)
         # v = vx / np.cos(th)
@@ -135,8 +136,8 @@ class ConstrainedOptimizer:
 
     def objfunc(self, data):
         funcs = {}
-        px = data['px']
-        py = data['py']
+        px:ndarray = data['px']
+        py:ndarray = data['py']
         
         x_jerk = (self.cjerk * px) @ self.tjerk_exp
         y_jerk = (self.cjerk * py) @ self.tjerk_exp
@@ -150,17 +151,13 @@ class ConstrainedOptimizer:
         return funcs, fail
 
     def run(self):
-        self.opt_prob = None
-        self.optimizer = None
-        self.opt_prob, self.optimizer = self.init_problem()
-        self.solve_problem(self.opt_prob, self.optimizer)
-        # self.plot_this_solution(n)
+        opt_prob, optimizer = self.init_problem()
+        self.solve_problem(opt_prob, optimizer)
 
-        # self.plot_final_results()
 
     def solve_problem(self, opt_prob: pyop.Optimization, optimizer: pyop.SNOPT):
         # sol: Solution = optimizer(opt_prob, sens='CS', sensMode='pgc', storeHistory=f"output/diff_flat.hst")
-        sol: Solution = optimizer(opt_prob, sens='CS', sensMode=None, storeHistory=f"output/diff_flat.hst")
+        sol: Solution = optimizer(opt_prob, sens='CS', sensMode=None, storeHistory=None)
         
         px = sol.xStar['px']
         py = sol.xStar['py']
@@ -185,7 +182,7 @@ class ConstrainedOptimizer:
         # print("Iterations:", sol.)
         # print(f"Printing solution:\n", sol)
         
-        self.plot_final_results(x, y, v, theta, gamma)
+        # self.plot_final_results(x, y, v, theta, gamma)
 
 
 #region
@@ -194,7 +191,7 @@ class ConstrainedOptimizer:
             'ls': '--',
             'color': 'k'
         }
-        
+           
         fig, ax = plt.subplots(nrows=1, ncols=1, sharex=False, squeeze=False)
         fig: Figure
         ax: List[Axes]

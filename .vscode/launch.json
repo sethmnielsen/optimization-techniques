@@ -65,6 +65,15 @@
             "redirectOutput": true
         },
         {
+            "name": "hw5",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/hw5/hw5.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "redirectOutput": true
+        },
+        {
             "name": "Python: Current File (Integrated Terminal)",
             "type": "python",
             "request": "launch",

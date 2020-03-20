@@ -217,7 +217,7 @@ if __name__=="__main__":
     ax3[0].plot(t_vec, v)
     ax3[0].set_ylabel('V (m/s)')
     ax3[1].plot(t_vec, gamma)
-    ax3[1].set_ylabel('$\gamma$ (rad)')
+    ax3[1].set_ylabel(r'$\gamma$ (rad)')
     ax3[1].set_xlabel('Time (s)')
     plt.savefig(path+'inputs.pdf', format='pdf', bbox_inches='tight', pad_inches=0.1)
 

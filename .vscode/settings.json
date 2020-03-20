@@ -2,6 +2,7 @@
     "python.autoComplete.extraPaths": [
         "/home/seth/school/optimization"
     ],
-    "python.linting.enabled": true,
-    "python.linting.pylintEnabled": true
+    "python.pythonPath": "/home/seth/.virtualenvs/v3.8/bin/python",
+    "python.linting.mypyEnabled": true,
+    "python.linting.enabled": true
 }
