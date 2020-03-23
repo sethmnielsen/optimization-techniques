@@ -2,14 +2,37 @@ import numpy as np
 import pyoptsparse
 import matplotlib.pyplot as plt
 import sys
+from typing import List, Any
 
-np.set_printoptions(precision=4, suppress=True, sign=' ', linewidth=100)
+# np.set_printoptions(precision=4, suppress=True, sign=' ', linewidth=100)
+
+import pickle
 
 #Consider reformatting with my derivatives
 l = 1.5
 t0 = 0.0
 tf = 15.0
 use_gamma = True
+px_list: List[Any] = []
+py_list: List[Any] = []
+
+x_list: List[Any] = []
+y_list: List[Any] = []
+
+vx_list: List[Any] = []
+vy_list: List[Any] = []
+
+ax_list: List[Any] = []
+ay_list: List[Any] = []
+
+Jx_list: List[Any] = []
+Jy_list: List[Any] = []
+
+gam_list: List[Any] = []
+gam2_list: List[Any] = []
+
+obj_list: List[Any] = []
+
 
 def position(t, p):
     px = p[:6]
@@ -90,6 +113,11 @@ def equalityConstraints(t0, tf, p):
 def inequalityConstraints(t, p):
     vx, vy = velocity(t, p)
     ax, ay = acceleration(t, p)
+    
+    vx_list.append(vx)
+    vy_list.append(vy)
+    ax_list.append(ax)
+    ay_list.append(ay)
 
     v = np.sqrt(vx**2 + vy**2)
     a = np.sqrt(ax**2 + ay**2)
@@ -98,6 +126,9 @@ def inequalityConstraints(t, p):
     arg2 = (vx * ay - vy * ax) / v**3
     gmax = arg1 - arg2
     gmax2 = arg1 + arg2
+    
+    gam_list.append(gmax)
+    gam2_list.append(gmax2)
     
     if use_gamma:
         ineq_con = np.zeros(400, dtype=type(p[0]))
@@ -114,18 +145,27 @@ def inequalityConstraints(t, p):
 
 def objective(x_dict):
     p = x_dict['xvars']
+    
+    px_list.append(p[:6])
+    py_list.append(p[6:])
+    
     t_span = np.linspace(t0, tf, 100)
     funcs = {}
 
     x, y = position(t_span, p)
+    x_list.append(x)
+    y_list.append(y)
     # px = p[:6]
     # py = p[6:]
     # print(f'{x=}\n{y=}\n\n')
 
-    #Implement integration of cost function here
+    # Implement integration of cost function here
     Jx, Jy = jerk(t_span, p)
+    Jx_list.append(Jx)
+    Jy_list.append(Jy)
     vdd = Jx**2 + Jy**2
     funcs['obj'] = np.sum(vdd) # I'm not sure that squaring vdd will do anything...
+    obj_list.append(funcs['obj'])
 
     #Equality Constraints
     funcs['eq_con'] = equalityConstraints(t0, tf, p)
@@ -154,8 +194,26 @@ if __name__=="__main__":
     opt = pyoptsparse.SNOPT()
     sol = opt(optProb, sens='CS', storeHistory='constrained.txt') 
     
+    data = {
+        'px': px_list,
+        'py': py_list,
+        'x':   x_list,
+        'y':   y_list,
+        'vx': vx_list,
+        'vy': vy_list,
+        'ax': ax_list,
+        'ay': ay_list,
+        'Jx': Jx_list,
+        'Jy': Jy_list,
+        'gam': gam_list,
+        'gam2': gam2_list,
+        'obj': obj_list
+    }
     
+    # with open('data.pkl', 'wb') as f:
+    #     pickle.dump(data, f)
     
+    # sys.exit(0)
     '''----------- Displaying the results -----------''' 
     
     #region

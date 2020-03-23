@@ -56,6 +56,16 @@
             "redirectOutput": true
         },
         {
+            "name": "constrained.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/hw4/constrained.py",
+            "cwd": "${workspaceFolder}/hw4",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "redirectOutput": true
+        },
+        {
             "name": "hw4",
             "type": "python",
             "request": "launch",

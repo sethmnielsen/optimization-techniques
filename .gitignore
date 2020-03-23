@@ -5,6 +5,8 @@
 output/
 hw2/plotter.py
 *pdf/
+*.pdf
+*.pkl
 
 
 # Byte-compiled / optimized / DLL files

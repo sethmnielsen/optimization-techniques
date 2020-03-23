@@ -9,12 +9,12 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import (AutoMinorLocator, MultipleLocator)
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from typing import List, Dict, Any
+from typing import Tuple, List, Dict, Any
 
 import seaborn as sns
 sns.set_style('white')
 
-class ConstrainedOptimizer:
+class TrajectoryGenerator:
     def __init__(self):
         # Plotting histories
         self.time_hist = []
@@ -33,9 +33,9 @@ class ConstrainedOptimizer:
         self.tacc_exp = self.t**np.array([0,0,0,1,2,3]).reshape(6,1) # exponents for accel terms
         self.tjerk_exp = self.t**np.array([0,0,0,0,1,2]).reshape(6,1) # exponents for each jerk term
         
-        self.cvel = np.arange(6) # Constant mulipliers for each velocity term
-        self.cacc = np.array([0, 0, 2, 6, 12, 20]) # Constant mulipliers for each acceleration term
-        self.cjerk = np.array([0, 0, 0, 6, 24, 60]) # Constant multipliers for each jerk term
+        self.cvel = np.arange(6, dtype=np.float64) # Constant mulipliers for each velocity term
+        self.cacc = np.array([0, 0, 2, 6, 12, 20], dtype=np.float64) # Constant mulipliers for each acceleration term
+        self.cjerk = np.array([0, 0, 0, 6, 24, 60], dtype=np.float64) # Constant multipliers for each jerk term
         
 
         # Optimization problem
@@ -63,9 +63,9 @@ class ConstrainedOptimizer:
         # constraints over entire trajectory
         opt_prob.addConGroup('v', nCon=self.n, lower=0, upper=self.vmax_square)
         opt_prob.addConGroup('a', nCon=self.n, lower=0, upper=self.amax_square)
-        opt_prob.addConGroup('gam_max', nCon=self.n, lower=-gam_max, upper=gam_max)
-        # opt_prob.addConGroup('gam_plus', nCon=self.n, lower=0, upper=gam_max)
-        # opt_prob.addConGroup('gam_minus', nCon=self.n, lower=0, upper=-gam_max)
+        # opt_prob.addConGroup('gam_max', nCon=self.n, lower=-gam_max, upper=gam_max)
+        opt_prob.addConGroup('gam_plus', nCon=self.n, lower=0, upper=None)
+        opt_prob.addConGroup('gam_minus', nCon=self.n, lower=0, upper=None)
         
         # Assign the key value for the objective function
         opt_prob.addObj('obj-min-jerk')
@@ -80,22 +80,47 @@ class ConstrainedOptimizer:
 
         return opt_prob, optimizer
         
-    def position(self, px:ndarray, py:ndarray, idx=...):
-        x = px @ self.tpos_exp[:,idx]
-        y = py @ self.tpos_exp[:,idx]
-        return x, y
+    def objfunc(self, data:Dict):
+        funcs: Dict = {}
+        px: ndarray = data['px'] 
+        py: ndarray = data['py']
+        funcs = self.inequality_constraints(funcs, px, py)
+        jerk_total = self.jerk(px, py)
+        funcs['obj-min-jerk'] = jerk_total
+        fail = False
+        return funcs, fail
     
-    def velocity(self, px:ndarray, py:ndarray, idx:Any=...):
-        xdot = (self.cvel * px) @ self.tvel_exp[:,idx]
-        ydot = (self.cvel * py) @ self.tvel_exp[:,idx]
-        return xdot, ydot
-    
-    def acceleration(self, px:ndarray, py:ndarray):
-        xddot = (self.cacc * px) @ self.tacc_exp
-        yddot = (self.cacc * py) @ self.tacc_exp
-        return xddot, yddot
+    def gamma(self, v, vx, vy, ax, ay):
+        gam_limit = v/self.L * np.tan(np.pi/4)
+        current_gam = (vx*ay - vy*ax) / v**3
+        gam_minus = gam_limit - current_gam
+        gam_plus = gam_limit + current_gam
+        return current_gam, gam_minus, gam_plus
+
+    def inequality_constraints(self, funcs:Dict, px:ndarray, py:ndarray) -> Dict:
+        vx, vy = self.velocity(px,py)
+        ax, ay = self.acceleration(px,py)
         
-    def equality_constraints(self, funcs:Dict, px:ndarray, py:ndarray, vx, vy):
+        funcs = self.equality_constraints(funcs, px, py, vx, vy)
+        
+        v = np.sqrt(vx**2 + vy**2)
+        a = np.sqrt(ax**2 + ay**2)
+        
+        funcs['v'] = v
+        funcs['a'] = a
+        current_gam, gam_minus, gam_plus = self.gamma(v, vx, vy, ax, ay)
+        funcs['gam_plus'] = gam_plus 
+        funcs['gam_minus'] = gam_minus
+        # funcs['gam_max'] = current_gam
+        
+        # th = np.arctan2(vy, vx)
+        # v = vx / np.cos(th)
+        # thdot = ay*vx - vy*ax
+        # gam = np.arctan2(thdot*self.L, v)
+        
+        return funcs
+
+    def equality_constraints(self, funcs:Dict, px:ndarray, py:ndarray, vx, vy) -> Dict:
         x0, y0 = self.position(px, py, 0)
         xf, yf = self.position(px, py, -1)
         
@@ -107,53 +132,30 @@ class ConstrainedOptimizer:
         
         return funcs
         
-    def inequality_constraints(self, funcs:Dict, px:ndarray, py:ndarray) -> Dict:
-        vx, vy = self.velocity(px,py)
-        ax, ay = self.acceleration(px,py)
-        
-        funcs = self.equality_constraints(funcs, px, py, vx, vy)
-        
-        v = np.sqrt(vx**2 + vy**2)
-        a = np.sqrt(ax**2 + ay**2)
-        gam_limit = v/self.L * np.tan(np.pi/4)
-        current_gam = (vx*ay - vy*ax) / v**3
-        gam_minus = gam_limit - current_gam
-        gam_plus = gam_limit + current_gam
-        
-        funcs['v'] = v
-        funcs['a'] = a
-        # funcs['gam_plus'] = gam_plus 
-        # funcs['gam_minus'] = gam_minus
-        funcs['gam_max'] = current_gam
-        
-        # th = np.arctan2(vy, vx)
-        # v = vx / np.cos(th)
-
-        # thdot = ay*vx - vy*ax
-        # gam = np.arctan2(thdot*self.L, v)
-        
-        return funcs
-
-    def objfunc(self, data):
-        funcs = {}
-        px:ndarray = data['px']
-        py:ndarray = data['py']
-        
+    def position(self, px:ndarray, py:ndarray, idx=...) -> Tuple[ndarray, ndarray]:
+        x = px @ self.tpos_exp[:,idx]
+        y = py @ self.tpos_exp[:,idx]
+        return x, y
+    
+    def velocity(self, px:ndarray, py:ndarray, idx:Any=...) -> Tuple[ndarray, ndarray]:
+        xdot = (self.cvel * px) @ self.tvel_exp[:,idx]
+        ydot = (self.cvel * py) @ self.tvel_exp[:,idx]
+        return xdot, ydot
+    
+    def acceleration(self, px:ndarray, py:ndarray) -> Tuple[ndarray, ndarray]:
+        xddot = (self.cacc * px) @ self.tacc_exp
+        yddot = (self.cacc * py) @ self.tacc_exp
+        return xddot, yddot
+    
+    def jerk(self, px:ndarray, py:ndarray) -> float:
         x_jerk = (self.cjerk * px) @ self.tjerk_exp
         y_jerk = (self.cjerk * py) @ self.tjerk_exp
-        
         jerk_total = np.sum(x_jerk**2 + y_jerk**2)
-
-        funcs = self.inequality_constraints(px, py, funcs)
+        return jerk_total
         
-        funcs['obj-min-jerk'] = jerk_total
-        fail = False
-        return funcs, fail
-
     def run(self):
         opt_prob, optimizer = self.init_problem()
         self.solve_problem(opt_prob, optimizer)
-
 
     def solve_problem(self, opt_prob: pyop.Optimization, optimizer: pyop.SNOPT):
         # sol: Solution = optimizer(opt_prob, sens='CS', sensMode='pgc', storeHistory=f"output/diff_flat.hst")
@@ -182,7 +184,7 @@ class ConstrainedOptimizer:
         # print("Iterations:", sol.)
         # print(f"Printing solution:\n", sol)
         
-        # self.plot_final_results(x, y, v, theta, gamma)
+        self.plot_final_results(x, y, v, theta, gamma)
 
 
 #region
@@ -229,6 +231,6 @@ class ConstrainedOptimizer:
 #endregion
 
 if __name__ == '__main__':
-    op = ConstrainedOptimizer()
-    op.run()
+    tg = TrajectoryGenerator()
+    tg.run()
     print("Optimization successful")
