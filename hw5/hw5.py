@@ -1,3 +1,4 @@
+# %%
 import numpy as np
 from numpy import ndarray
 import pyoptsparse as pyop
@@ -157,7 +158,7 @@ class QuadTrajectoryGenerator:
         
     def run(self):
         # sol: Solution = self.optimizer(self.opt_prob, sens='CS', sensMode=None, storeHistory=None)
-        sol: Solution = self.optimizer(self.opt_prob, sens='CS', sensMode=None, storeHistory=f'output/hw5.hst')
+        sol: Solution = self.optimizer(self.opt_prob, sens='CS', sensMode=None, storeHistory=f'/home/seth/school/optimization/output/hw5.hst')
         
         px = sol.xStar['px']
         py = sol.xStar['py']
@@ -171,14 +172,16 @@ class QuadTrajectoryGenerator:
         theta = np.rad2deg(np.arctan2(v[1], v[0]))
         gamma = np.rad2deg(np.arctan2(self.L * (v[0] * a[1] - v[1] * a[0]), vn**3)) 
 
-        print("...done!")
+        print("\n\n...done!\n\n")
+        print("PRINTING SOLUTION\n\n")
+        print(sol.)
 
         print(f'sol.fStar:  {sol.fStar}')
         print(f'sol.xStar[\'px\']: {p[0]}')
         print(f'sol.xStar[\'py\']: {p[1]}')
         print(f'sol.xStar[\'pz\']: {p[2]}')
         print(f'sol.xStar[\'ps\']: {p[3]}')
-        print(f'{sol.userObjCalls=}')
+        print(f'userObjCalls: {sol.userObjCalls}')
 
         # self.plot_final_results(pos[0], [pos[1]], vn, theta, gamma)
 
@@ -230,3 +233,6 @@ if __name__ == '__main__':
     tg = QuadTrajectoryGenerator()
     tg.run()
     print("Optimization successful")
+
+
+# %%

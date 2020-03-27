@@ -22,8 +22,8 @@ for i in range(int(d['last'])+1):
     data.append( d[str(i)] )
     
 # %%
-for i in range(8):
-    print(f'{i}: {data[i].values()}')
+# for i in range(8):
+    # print(f'{i}: {data[i].values()}')
 
 # %%
 xuser = np.zeros((8,4,6))
@@ -37,12 +37,15 @@ for i in range(len(data)):
     keys = data[i].keys()
     fkey = 'funcs' if 'funcs' in keys else 'funcsSens'
     funcs_dict = data[i][fkey]
-    print(f'{funcs_dict = }')
-    for j, con in enumerate(funcs_dict.values()):
-        print(j)
-        if j == 4:
-            break
-        funcsi[j] = con
+    # print(f'\n\nFKEY: {fkey}')
+    # print(f'{funcs_dict = }')
+    if fkey == 'funcs':
+        for j, con in enumerate(funcs_dict.values()):
+            if j == 4:
+                break
+            funcsi[j] = con
+    else:
+       print(funcs_dict) 
     funcs[i] = funcsi
 
 # %%
