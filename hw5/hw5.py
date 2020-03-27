@@ -14,17 +14,10 @@ from typing import Tuple, List, Dict, Any
 import seaborn as sns
 sns.set_style('white')
 
-class TrajectoryGenerator:
+class QuadTrajectoryGenerator:
     def __init__(self):
         # Plotting histories
-        self.time_hist = []
-        self.wall_time_hist = []
-        self.func_evals = []
-        self.num_iterations = []
-
-    def init_problem(self):
-        px = np.zeros(6) + 1e-4
-        py = np.zeros(6) + 1e-4
+        p0 = np.zeros(6) + 1e-4
 
         self.n = 100
         self.t = np.linspace(0, 15, self.n)
@@ -36,17 +29,26 @@ class TrajectoryGenerator:
         self.cvel = np.arange(6, dtype=np.float64) # Constant mulipliers for each velocity term
         self.cacc = np.array([0, 0, 2, 6, 12, 20], dtype=np.float64) # Constant mulipliers for each acceleration term
         self.cjerk = np.array([0, 0, 0, 6, 24, 60], dtype=np.float64) # Constant multipliers for each jerk term
-        
 
         # Optimization problem
-        opt_prob: pyop.Optimization = pyop.Optimization('differential_flat', self.objfunc)
+        opt_prob: pyop.Optimization = pyop.Optimization('differential_flat_quad', self.objfunc)
 
         # Design variables
-        opt_prob.addVarGroup('px', nVars=6, type='c', value=px, lower=None, upper=None)
-        opt_prob.addVarGroup('py', nVars=6, type='c', value=py, lower=None, upper=None)
+        opt_prob.addVarGroup('px', nVars=6, type='c', value=p0, lower=None, upper=None)
+        opt_prob.addVarGroup('py', nVars=6, type='c', value=p0, lower=None, upper=None)
+        opt_prob.addVarGroup('pz', nVars=6, type='c', value=p0, lower=None, upper=None)
+        opt_prob.addVarGroup('ps', nVars=6, type='c', value=p0, lower=None, upper=None)
 
-        x0, y0, xf, yf = [0., 0., 10., 0.]
-        vx0, vy0, vxf, vyf = [0., 2., 0., 1.]
+        # ENU
+        #      [ x,   y,   z, psi ]
+        pos0 = [0.,  0.,  0.,  0. ]
+        posf = [0., 10., 10.,  0. ]
+        vel0 = [0.,  2.,  2.,  0. ]
+        velf = [0.,  2.,  0.,  0. ]
+        # x0, y0, z0, psi0 = [0.,  0.,  0., 0.]
+        # xf, yf, zf, psif = [0., 10., 10., 0.]
+        # vx0, vy0, vz0, w0 = [0., 2., 2., 0.]
+        # vxf, vyf, vzf, wf = [0., 2., 0., 0.]
 
         self.L = 1.5 # length of car
         gam_max = np.pi/4
@@ -55,136 +57,130 @@ class TrajectoryGenerator:
 
         #### CONSTRAINTS ####
         # start and finish constraints
-        opt_prob.addConGroup('initial pos', nCon=2, lower=[x0,y0], upper=[x0,y0])
-        opt_prob.addConGroup('initial vel', nCon=2, lower=[vx0,vy0], upper=[vx0,vy0])
-        opt_prob.addConGroup('final pos', nCon=2, lower=[xf,yf], upper=[xf,yf])
-        opt_prob.addConGroup('final vel', nCon=2, lower=[vxf,vyf], upper=[vxf,vyf])
+        opt_prob.addConGroup('initial pos', nCon=4, lower=pos0, upper=pos0)
+        opt_prob.addConGroup('initial vel', nCon=4, lower=vel0, upper=vel0)
+        opt_prob.addConGroup('final pos',   nCon=4, lower=posf, upper=posf)
+        opt_prob.addConGroup('final vel',   nCon=4, lower=velf, upper=velf)
         
         # constraints over entire trajectory
-        opt_prob.addConGroup('v', nCon=self.n, lower=0, upper=self.vmax_square)
-        opt_prob.addConGroup('a', nCon=self.n, lower=0, upper=self.amax_square)
+        # opt_prob.addConGroup('v', nCon=self.n, lower=0, upper=self.vmax_square)
+        # opt_prob.addConGroup('a', nCon=self.n, lower=0, upper=self.amax_square)
         # opt_prob.addConGroup('gam_max', nCon=self.n, lower=-gam_max, upper=gam_max)
-        opt_prob.addConGroup('gam_plus', nCon=self.n, lower=0, upper=None)
-        opt_prob.addConGroup('gam_minus', nCon=self.n, lower=0, upper=None)
+        # opt_prob.addConGroup('gam_plus', nCon=self.n, lower=0, upper=None)
+        # opt_prob.addConGroup('gam_minus', nCon=self.n, lower=0, upper=None)
         
         # Assign the key value for the objective function
         opt_prob.addObj('obj-min-jerk')
 
         # Optimizer
         optimizer = pyop.SNOPT()
-        optimizer.setOption('iPrint',0)
-        optimizer.setOption('iSumm', 0)
-        # path = '/home/seth/school/optimization/output/'
-        # optimizer.setOption('Print file', path+f'SNOPT_print-{n}.out')
-        # optimizer.setOption('Summary file', path+f'SNOPT_summary-{n}.out')
+        # optimizer.setOption('iPrint',0)
+        # optimizer.setOption('iSumm', 0)
 
-        return opt_prob, optimizer
+        self.opt_prob: pyop.Optimization = opt_prob 
+        self.optimizer: pyop.SNOPT = optimizer
         
     def objfunc(self, data:Dict):
-        funcs: Dict = {}
         px: ndarray = data['px'] 
         py: ndarray = data['py']
-        funcs = self.inequality_constraints(funcs, px, py)
-        jerk_total = self.jerk(px, py)
+        pz: ndarray = data['pz']
+        ps: ndarray = data['ps']
+        
+        p = np.array([px, py, pz, ps])
+
+        funcs: Dict = {}
+        funcs = self.inequality_constraints(funcs, p)
+        jerk_total = self.jerk(p)
         funcs['obj-min-jerk'] = jerk_total
         fail = False
         return funcs, fail
     
-    def gamma(self, v, vx, vy, ax, ay):
-        gam_limit = v/self.L * np.tan(np.pi/4)
-        current_gam = (vx*ay - vy*ax) / v**3
+    def gamma(self, vn, v, a):
+        gam_limit = vn/self.L * np.tan(np.pi/4)
+        current_gam = (v[0]*a[1] - v[1]*a[0]) / vn**3
         gam_minus = gam_limit - current_gam
         gam_plus = gam_limit + current_gam
         return current_gam, gam_minus, gam_plus
 
-    def inequality_constraints(self, funcs:Dict, px:ndarray, py:ndarray) -> Dict:
-        vx, vy = self.velocity(px,py)
-        ax, ay = self.acceleration(px,py)
+    def inequality_constraints(self, funcs:Dict, p:ndarray) -> Dict:
+        v = np.array(self.velocity(p))
+        a = np.array(self.acceleration(p))
         
-        funcs = self.equality_constraints(funcs, px, py, vx, vy)
+        funcs = self.equality_constraints(funcs, p, v)
         
-        v = np.sqrt(vx**2 + vy**2)
-        a = np.sqrt(ax**2 + ay**2)
+        vn = np.sqrt(np.sum(v**2))
+        an = np.sqrt(np.sum(a**2))
         
-        funcs['v'] = v
-        funcs['a'] = a
-        current_gam, gam_minus, gam_plus = self.gamma(v, vx, vy, ax, ay)
-        funcs['gam_plus'] = gam_plus 
-        funcs['gam_minus'] = gam_minus
+        # funcs['v'] = vn
+        # funcs['a'] = an
+        # current_gam, gam_minus, gam_plus = self.gamma(vn, v, a)
+        # funcs['gam_plus'] = gam_plus 
+        # funcs['gam_minus'] = gam_minus
         # funcs['gam_max'] = current_gam
         
         # th = np.arctan2(vy, vx)
         # v = vx / np.cos(th)
         # thdot = ay*vx - vy*ax
         # gam = np.arctan2(thdot*self.L, v)
-        
         return funcs
 
-    def equality_constraints(self, funcs:Dict, px:ndarray, py:ndarray, vx, vy) -> Dict:
-        x0, y0 = self.position(px, py, 0)
-        xf, yf = self.position(px, py, -1)
-        
+    def equality_constraints(self, funcs:Dict, p, v) -> Dict:
         # Bundle up constraints
-        funcs['initial pos'] = [x0, y0]
-        funcs['initial vel'] = [vx[0], vy[0]] 
-        funcs['final pos'] = [xf, yf]
-        funcs['final vel'] = [vx[-1], vy[-1]]
+        funcs['initial pos'] = np.array([self.position(p,0)])
+        funcs['initial vel'] = np.array([v[0,0], v[1,0], v[2,0], v[3,0]])
+        funcs['final pos']   = np.array([self.position(p, -1)])
+        funcs['final vel']   = np.array([v[0,-1], v[1,-1], v[2,-1], v[3,-1]])
         
         return funcs
+    
+    def derivs(self, p, c, t_exp, idx=...):
+        x = (self.cvel * p[0]) @ self.tvel_exp[:,idx]
+        y = (self.cvel * p[1]) @ self.tvel_exp[:,idx]
+        z = (self.cvel * p[2]) @ self.tvel_exp[:,idx]
+        s = (self.cvel * p[3]) @ self.tvel_exp[:,idx]
+        return x, y, z, s
+
         
-    def position(self, px:ndarray, py:ndarray, idx=...) -> Tuple[ndarray, ndarray]:
-        x = px @ self.tpos_exp[:,idx]
-        y = py @ self.tpos_exp[:,idx]
-        return x, y
+    def position(self, p:ndarray, idx=...):
+        return self.derivs(p, 1, self.tpos_exp, idx)
     
-    def velocity(self, px:ndarray, py:ndarray, idx:Any=...) -> Tuple[ndarray, ndarray]:
-        xdot = (self.cvel * px) @ self.tvel_exp[:,idx]
-        ydot = (self.cvel * py) @ self.tvel_exp[:,idx]
-        return xdot, ydot
+    def velocity(self, p:ndarray, idx:Any=...):
+        return self.derivs(p, self.cvel, self.tvel_exp, idx)
     
-    def acceleration(self, px:ndarray, py:ndarray) -> Tuple[ndarray, ndarray]:
-        xddot = (self.cacc * px) @ self.tacc_exp
-        yddot = (self.cacc * py) @ self.tacc_exp
-        return xddot, yddot
+    def acceleration(self, p:ndarray):
+        return self.derivs(p, self.cacc, self.tacc_exp)
     
-    def jerk(self, px:ndarray, py:ndarray) -> float:
-        x_jerk = (self.cjerk * px) @ self.tjerk_exp
-        y_jerk = (self.cjerk * py) @ self.tjerk_exp
-        jerk_total = np.sum(x_jerk**2 + y_jerk**2)
+    def jerk(self, p:ndarray) -> float:
+        jerk = np.array(self.derivs(p, self.cjerk, self.tjerk_exp))
+        jerk_total = np.sum(jerk**2)
         return jerk_total
         
     def run(self):
-        opt_prob, optimizer = self.init_problem()
-        self.solve_problem(opt_prob, optimizer)
-
-    def solve_problem(self, opt_prob: pyop.Optimization, optimizer: pyop.SNOPT):
-        # sol: Solution = optimizer(opt_prob, sens='CS', sensMode='pgc', storeHistory=f"output/diff_flat.hst")
-        sol: Solution = optimizer(opt_prob, sens='CS', sensMode=None, storeHistory=None)
+        # sol: Solution = self.optimizer(self.opt_prob, sens='CS', sensMode=None, storeHistory=None)
+        sol: Solution = self.optimizer(self.opt_prob, sens='CS', sensMode=None, storeHistory=f'output/hw5.hst')
         
         px = sol.xStar['px']
         py = sol.xStar['py']
-        x, y = self.position(px, py)
-        vx, vy = self.velocity(px, py)
-        ax, ay = self.acceleration(px, py)
-        v = np.sqrt(vx**2 + vy**2)
-        theta = np.rad2deg(np.arctan2(vy, vx))
-        gamma = np.rad2deg(np.arctan2(self.L * (vx * ay - vy * ax), v**3)) 
+        pz = sol.xStar['pz']
+        ps = sol.xStar['ps']
+        p = [px, py, pz, ps]
+        pos = self.position(p)
+        v = np.array(self.velocity(p))
+        a = np.array(self.acceleration(p))
+        vn = np.sqrt(np.sum(v**2))
+        theta = np.rad2deg(np.arctan2(v[1], v[0]))
+        gamma = np.rad2deg(np.arctan2(self.L * (v[0] * a[1] - v[1] * a[0]), vn**3)) 
 
         print("...done!")
 
         print(f'sol.fStar:  {sol.fStar}')
-        print(f'sol.xStar[\'px\']: {px}')
-        print(f'sol.xStar[\'py\']: {py}')
+        print(f'sol.xStar[\'px\']: {p[0]}')
+        print(f'sol.xStar[\'py\']: {p[1]}')
+        print(f'sol.xStar[\'pz\']: {p[2]}')
+        print(f'sol.xStar[\'ps\']: {p[3]}')
+        print(f'{sol.userObjCalls=}')
 
-        self.time_hist.append(sol.fStar)
-        self.wall_time_hist.append(sol.optTime)
-        self.func_evals.append(sol.userObjCalls)
-        print("sol.optTime:", sol.optTime)
-        print("Calls to objective function:", sol.userObjCalls)
-        # print("Iterations:", sol.)
-        # print(f"Printing solution:\n", sol)
-        
-        self.plot_final_results(x, y, v, theta, gamma)
+        # self.plot_final_results(pos[0], [pos[1]], vn, theta, gamma)
 
 
 #region
@@ -231,6 +227,6 @@ class TrajectoryGenerator:
 #endregion
 
 if __name__ == '__main__':
-    tg = TrajectoryGenerator()
+    tg = QuadTrajectoryGenerator()
     tg.run()
     print("Optimization successful")
