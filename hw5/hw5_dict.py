@@ -1,4 +1,5 @@
 # %%
+import numpy as np
 from pyoptsparse import History
 
 h = History('/home/seth/school/optimization/output/hw5.hst', flag='r')
@@ -29,6 +30,7 @@ for i in range(int(d['last'])+1):
 xuser = np.zeros((8,4,6))
 xuseri = np.zeros((4,6))
 funcs = np.zeros((8,4,4))
+# funcs2 = np.zeros((8,4,4))
 funcsi = np.zeros((4,4))
 for i in range(len(data)):
     xuser_dict = data[i]['xuser']

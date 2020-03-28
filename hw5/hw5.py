@@ -1,4 +1,4 @@
-# %%
+## %%
 import numpy as np
 from numpy import ndarray
 import pyoptsparse as pyop
@@ -42,10 +42,10 @@ class QuadTrajectoryGenerator:
 
         # ENU
         #      [ x,   y,   z, psi ]
-        pos0 = [0.,  0.,  0.,  0. ]
-        posf = [0., 10., 10.,  0. ]
-        vel0 = [0.,  2.,  2.,  0. ]
-        velf = [0.,  2.,  0.,  0. ]
+        pos0 = np.array([0.,  0.,  0.,  0. ])
+        posf = np.array([0., 10., 10.,  0. ])
+        vel0 = np.array([0.,  2.,  2.,  0. ])
+        velf = np.array([0.,  2.,  0.,  0. ])
         # x0, y0, z0, psi0 = [0.,  0.,  0., 0.]
         # xf, yf, zf, psif = [0., 10., 10., 0.]
         # vx0, vy0, vz0, w0 = [0., 2., 2., 0.]
@@ -77,6 +77,9 @@ class QuadTrajectoryGenerator:
         optimizer = pyop.SNOPT()
         # optimizer.setOption('iPrint',0)
         # optimizer.setOption('iSumm', 0)
+        path = '/home/seth/school/optimization/output/'
+        optimizer.setOption('Print file', path+f'SNOPT-hw5.out')
+        optimizer.setOption('Summary file', path+f'SNOPT-hw5-summary.out')
 
         self.opt_prob: pyop.Optimization = opt_prob 
         self.optimizer: pyop.SNOPT = optimizer
@@ -173,8 +176,8 @@ class QuadTrajectoryGenerator:
         gamma = np.rad2deg(np.arctan2(self.L * (v[0] * a[1] - v[1] * a[0]), vn**3)) 
 
         print("\n\n...done!\n\n")
-        print("PRINTING SOLUTION\n\n")
-        print(sol.)
+        # print("PRINTING SOLUTION\n\n")
+        # print(sol)
 
         print(f'sol.fStar:  {sol.fStar}')
         print(f'sol.xStar[\'px\']: {p[0]}')
