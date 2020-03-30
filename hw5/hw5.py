@@ -93,42 +93,15 @@ class QuadTrajectoryGenerator:
         p = np.array([px, py, pz, ps])
 
         funcs: Dict = {}
-        funcs = self.inequality_constraints(funcs, p)
+        funcs = self.equality_constraints(funcs, p)
         jerk_total = self.jerk(p)
         funcs['obj-min-jerk'] = jerk_total
         fail = False
         return funcs, fail
     
-    def gamma(self, vn, v, a):
-        gam_limit = vn/self.L * np.tan(np.pi/4)
-        current_gam = (v[0]*a[1] - v[1]*a[0]) / vn**3
-        gam_minus = gam_limit - current_gam
-        gam_plus = gam_limit + current_gam
-        return current_gam, gam_minus, gam_plus
-
-    def inequality_constraints(self, funcs:Dict, p:ndarray) -> Dict:
+    def equality_constraints(self, funcs:Dict, p) -> Dict:
         v = np.array(self.velocity(p))
-        a = np.array(self.acceleration(p))
         
-        funcs = self.equality_constraints(funcs, p, v)
-        
-        vn = np.sqrt(np.sum(v**2))
-        an = np.sqrt(np.sum(a**2))
-        
-        # funcs['v'] = vn
-        # funcs['a'] = an
-        # current_gam, gam_minus, gam_plus = self.gamma(vn, v, a)
-        # funcs['gam_plus'] = gam_plus 
-        # funcs['gam_minus'] = gam_minus
-        # funcs['gam_max'] = current_gam
-        
-        # th = np.arctan2(vy, vx)
-        # v = vx / np.cos(th)
-        # thdot = ay*vx - vy*ax
-        # gam = np.arctan2(thdot*self.L, v)
-        return funcs
-
-    def equality_constraints(self, funcs:Dict, p, v) -> Dict:
         # Bundle up constraints
         funcs['initial pos'] = np.array([self.position(p,0)])
         funcs['initial vel'] = np.array([v[0,0], v[1,0], v[2,0], v[3,0]])
@@ -138,10 +111,10 @@ class QuadTrajectoryGenerator:
         return funcs
     
     def derivs(self, p, c, t_exp, idx=...):
-        x = (self.cvel * p[0]) @ self.tvel_exp[:,idx]
-        y = (self.cvel * p[1]) @ self.tvel_exp[:,idx]
-        z = (self.cvel * p[2]) @ self.tvel_exp[:,idx]
-        s = (self.cvel * p[3]) @ self.tvel_exp[:,idx]
+        x = (c*p[0]) @ t_exp[:,idx]
+        y = (c*p[1]) @ t_exp[:,idx]
+        z = (c*p[2]) @ t_exp[:,idx]
+        s = (c*p[3]) @ t_exp[:,idx]
         return x, y, z, s
 
         
@@ -167,7 +140,7 @@ class QuadTrajectoryGenerator:
         py = sol.xStar['py']
         pz = sol.xStar['pz']
         ps = sol.xStar['ps']
-        p = [px, py, pz, ps]
+        p = np.array([px, py, pz, ps])
         pos = self.position(p)
         v = np.array(self.velocity(p))
         a = np.array(self.acceleration(p))
@@ -186,51 +159,80 @@ class QuadTrajectoryGenerator:
         print(f'sol.xStar[\'ps\']: {p[3]}')
         print(f'userObjCalls: {sol.userObjCalls}')
 
-        # self.plot_final_results(pos[0], [pos[1]], vn, theta, gamma)
+        self.plot_final_results(p, theta)
 
 
-#region
-    def plot_final_results(self, x, y, v, theta, gamma):
+    def plot_final_results(self, p, theta):
         props = {
             'ls': '--',
             'color': 'k'
         }
-           
-        fig, ax = plt.subplots(nrows=1, ncols=1, sharex=False, squeeze=False)
+        
+        x, y, z, psi = self.position(p)
+        
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
         fig: Figure
-        ax: List[Axes]
-        ax = ax[0]
-        ax[0].set_title("Trajectory")
-        ax[0].plot(x, y, linewidth=2, color='r')
-        ax[0].set_xlabel(r"$x_d$")
-        ax[0].set_ylabel(r"$y_d$")
+        ax: Axes
+        ax.set_title("Trajectory")
+        ax.plot(x, y, z, linewidth=2, color='r')
+        ax.set_xlabel(r"$x_d$")
+        ax.set_ylabel(r"$y_d$")
+        # ax.set_zlabel(r"$z_d$")
         
-        fig2, ax2 = plt.subplots(nrows=3, ncols=1, sharex=True)
-        fig2: Figure
-        ax2: List[Axes]
-        ax2[0].set_title("States over time")
-        ax2[2].set_xlabel(r"$t$")
-        ax2[0].plot(self.t, x, linewidth=2, color='r')
-        ax2[1].plot(self.t, y, linewidth=2, color='r')
-        ax2[2].plot(self.t, theta, linewidth=2, color='r')
-        ax2[0].set_ylabel(r"$x_d$")
-        ax2[1].set_ylabel(r"$y_d$")
-        ax2[2].set_ylabel(r"$\theta_d$")
+        # fig2, ax2 = plt.subplots(nrows=3, ncols=1, sharex=True)
+        # fig2: Figure
+        # ax2: List[Axes]
+        # ax2[0].set_title("States over time")
+        # ax2[2].set_xlabel(r"$t$")
+        # ax2[0].plot(self.t, x, linewidth=2, color='r')
+        # ax2[1].plot(self.t, y, linewidth=2, color='r')
+        # ax2[2].plot(self.t, theta, linewidth=2, color='r')
+        # ax2[0].set_ylabel(r"$x_d$")
+        # ax2[1].set_ylabel(r"$y_d$")
+        # ax2[2].set_ylabel(r"$\theta_d$")
         
-        
-        fig2, ax2 = plt.subplots(nrows=2, ncols=1, sharex=True)
-        fig2: Figure
-        ax2: List[Axes]
-        ax2[0].set_title("Inputs over time")
-        ax2[1].set_xlabel(r"$t$")
-        ax2[0].plot(self.t, v, linewidth=2, color='r')
-        ax2[1].plot(self.t, gamma, linewidth=2, color='r')
-        ax2[0].set_ylabel(r"$v$")
-        ax2[1].set_ylabel(r"$\gamma$")
+        # fig2, ax2 = plt.subplots(nrows=2, ncols=1, sharex=True)
+        # fig2: Figure
+        # ax2: List[Axes]
+        # ax2[0].set_title("Inputs over time")
+        # ax2[1].set_xlabel(r"$t$")
+        # ax2[0].plot(self.t, v, linewidth=2, color='r')
+        # ax2[1].plot(self.t, gamma, linewidth=2, color='r')
+        # ax2[0].set_ylabel(r"$v$")
+        # ax2[1].set_ylabel(r"$\gamma$")
         
         plt.show()
         
-#endregion
+    def gamma(self, vn, v, a):
+        gam_limit = vn/self.L * np.tan(np.pi/4)
+        current_gam = (v[0]*a[1] - v[1]*a[0]) / vn**3
+        gam_minus = gam_limit - current_gam
+        gam_plus = gam_limit + current_gam
+        return current_gam, gam_minus, gam_plus
+    
+    def inequality_constraints_old(self, funcs:Dict, p:ndarray) -> Dict:
+        v = np.array(self.velocity(p))
+        a = np.array(self.acceleration(p))
+        
+        funcs = self.equality_constraints(funcs, p, v)
+        
+        vn = np.sqrt(np.sum(v**2))
+        an = np.sqrt(np.sum(a**2))
+        
+        funcs['v'] = vn
+        funcs['a'] = an
+        current_gam, gam_minus, gam_plus = self.gamma(vn, v, a)
+        funcs['gam_plus'] = gam_plus 
+        funcs['gam_minus'] = gam_minus
+        funcs['gam_max'] = current_gam
+        
+        th = np.arctan2(vy, vx)
+        v = vx / np.cos(th)
+        thdot = ay*vx - vy*ax
+        gam = np.arctan2(thdot*self.L, v)
+        return funcs
+
 
 if __name__ == '__main__':
     tg = QuadTrajectoryGenerator()

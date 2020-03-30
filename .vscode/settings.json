@@ -3,12 +3,12 @@
         "/home/seth/school/optimization"
     ],
     "python.pythonPath": "/home/seth/.virtualenvs/v3.8/bin/python",
-    "python.linting.enabled": false,
     "python.testing.pytestArgs": [
         "hw5"
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.nosetestsEnabled": false,
     "python.linting.mypyEnabled": false,
-    "python.linting.pylintEnabled": true
+    "python.linting.pylintEnabled": true,
+    "python.linting.enabled": true
 }
