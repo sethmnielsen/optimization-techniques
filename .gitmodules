@@ -1,0 +1,3 @@
+[submodule "simanneal"]
+	path = simanneal
+	url = https://github.com/perrygeo/simanneal.git
