@@ -122,6 +122,7 @@ def monte_carlo():
         n = nvec[i]
 
         # TODO: generate random numbers from the input distributions.
+        #alpha: weibull
         
         
         # initialize for Monte Carlo
