@@ -2,7 +2,7 @@
     "python.autoComplete.extraPaths": [
         "/home/seth/school/optimization"
     ],
-    "python.pythonPath": "/home/seth/.virtualenvs/v3.8/bin/python",
+    "python.pythonPath": "/home/seth/.virtualenvs/v3.8/bin/python3",
     "python.testing.pytestArgs": [
         "hw5"
     ],

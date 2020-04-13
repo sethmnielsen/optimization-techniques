@@ -1,3 +1,6 @@
 [submodule "simanneal"]
 	path = simanneal
 	url = https://github.com/perrygeo/simanneal.git
+[submodule "trajectory-optimization"]
+	path = trajectory-optimization
+	url = git@magiccvs.byu.edu:thanedowning/trajectory-optimization.git
